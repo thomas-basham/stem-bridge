@@ -58,4 +58,25 @@ export const projectsService = {
       throw error instanceof Error ? error : new Error('Unable to load projects.');
     }
   },
+  async getById(projectId: string): Promise<ProjectSummary | null> {
+    if (useMockData) {
+      await wait(220);
+      return mockProjects.find((project) => project.id === projectId) ?? null;
+    }
+
+    try {
+      const response = await apiClient.get<ProjectSummary>(`/projects/${projectId}`);
+      return response.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 404) {
+          return null;
+        }
+
+        throw new Error(error.response?.statusText || error.message);
+      }
+
+      throw error instanceof Error ? error : new Error('Unable to load project.');
+    }
+  },
 };

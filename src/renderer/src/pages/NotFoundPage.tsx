@@ -1,14 +1,24 @@
 import { Link } from 'react-router-dom';
+import { useAuth } from '@/features/auth/auth-context';
 
 export function NotFoundPage() {
+  const { isAuthenticated } = useAuth();
+  const returnPath = isAuthenticated ? '/projects' : '/login';
+  const returnLabel = isAuthenticated ? 'Back to Projects' : 'Back to Login';
+
   return (
-    <section className="not-found-card">
-      <p className="not-found-card__eyebrow">Navigation</p>
-      <h3>That view is not available in the MVP.</h3>
-      <p>Return to the dashboard and keep building out the collaboration workflow.</p>
-      <Link to="/" className="control-button control-button--link">
-        Back to Dashboard
-      </Link>
-    </section>
+    <div className="not-found-view">
+      <section className="not-found-card">
+        <p className="not-found-card__eyebrow">404</p>
+        <h3>That route does not exist.</h3>
+        <p>
+          The requested page is outside the current StemBridge routing map. Use the primary route
+          entry points to continue.
+        </p>
+        <Link to={returnPath} className="control-button control-button--link">
+          {returnLabel}
+        </Link>
+      </section>
+    </div>
   );
 }
