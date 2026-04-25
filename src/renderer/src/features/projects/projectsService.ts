@@ -1,6 +1,6 @@
 import axios from 'axios';
 import type { ProjectSummary } from '@shared/types';
-import { apiClient } from '@/lib/api/client';
+import { getApiErrorMessage, projectsApi } from '@/lib/api';
 
 const mockProjects: ProjectSummary[] = [
   {
@@ -48,11 +48,10 @@ export const projectsService = {
     }
 
     try {
-      const response = await apiClient.get<ProjectSummary[]>('/projects');
-      return response.data;
+      return await projectsApi.list();
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.statusText || error.message);
+        throw new Error(getApiErrorMessage(error, 'Unable to load projects.'));
       }
 
       throw error instanceof Error ? error : new Error('Unable to load projects.');
@@ -65,15 +64,14 @@ export const projectsService = {
     }
 
     try {
-      const response = await apiClient.get<ProjectSummary>(`/projects/${projectId}`);
-      return response.data;
+      return await projectsApi.getById(projectId);
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 404) {
           return null;
         }
 
-        throw new Error(error.response?.statusText || error.message);
+        throw new Error(getApiErrorMessage(error, 'Unable to load project.'));
       }
 
       throw error instanceof Error ? error : new Error('Unable to load project.');

@@ -5,8 +5,13 @@ import {
   type LoginInput,
   type RegisterInput,
 } from '@/features/auth/auth-context';
-
-const authStorageKey = 'stembridge.desktop.auth-user';
+import {
+  clearAuthSession,
+  clearStoredUser,
+  getStoredUser,
+  setStoredUser,
+} from '@/lib/auth-storage';
+import { unauthorizedEventName } from '@/lib/api';
 
 const titleCase = (value: string): string => {
   return value
@@ -35,25 +40,6 @@ const isAuthUser = (value: unknown): value is AuthUser => {
   );
 };
 
-const readStoredUser = (): AuthUser | null => {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
-  try {
-    const rawValue = window.localStorage.getItem(authStorageKey);
-
-    if (!rawValue) {
-      return null;
-    }
-
-    const parsedValue: unknown = JSON.parse(rawValue);
-    return isAuthUser(parsedValue) ? parsedValue : null;
-  } catch {
-    return null;
-  }
-};
-
 const createAuthUser = (email: string, name: string): AuthUser => {
   const normalizedEmail = email.trim().toLowerCase();
   const resolvedName = name.trim() || buildNameFromEmail(normalizedEmail);
@@ -66,15 +52,25 @@ const createAuthUser = (email: string, name: string): AuthUser => {
 };
 
 export function AuthProvider({ children }: PropsWithChildren) {
-  const [user, setUser] = useState<AuthUser | null>(() => readStoredUser());
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    const storedUser = getStoredUser();
+    return isAuthUser(storedUser) ? storedUser : null;
+  });
+
+  useEffect(() => {
+    const handleUnauthorized = (): void => setUser(null);
+
+    window.addEventListener(unauthorizedEventName, handleUnauthorized);
+    return () => window.removeEventListener(unauthorizedEventName, handleUnauthorized);
+  }, []);
 
   useEffect(() => {
     if (user) {
-      window.localStorage.setItem(authStorageKey, JSON.stringify(user));
+      setStoredUser(user);
       return;
     }
 
-    window.localStorage.removeItem(authStorageKey);
+    clearStoredUser();
   }, [user]);
 
   const login = ({ email, password }: LoginInput): void => {
@@ -94,6 +90,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   };
 
   const logout = (): void => {
+    clearAuthSession();
     setUser(null);
   };
 
