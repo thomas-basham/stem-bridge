@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Badge, Button } from '@/components/ui';
 import { useAuth } from '@/features/auth/auth-context';
 import { useDesktopMetadata } from '@/hooks/useDesktopMetadata';
 
@@ -59,9 +60,9 @@ export function AppLayout() {
         <div className="desktop-sidebar__section desktop-sidebar__section--footer">
           <p className="desktop-sidebar__section-label">Runtime</p>
           <p className="desktop-sidebar__runtime">{runtimeLabel}</p>
-          <button type="button" className="control-button control-button--ghost" onClick={handleLogout}>
+          <Button type="button" variant="ghost" onClick={handleLogout}>
             Sign Out
-          </button>
+          </Button>
         </div>
       </aside>
 
@@ -73,8 +74,8 @@ export function AppLayout() {
           </div>
 
           <div className="desktop-topbar__status">
-            <span className="tag">Protected Route</span>
-            <span className="tag">Context Isolation Enabled</span>
+            <Badge tone="teal">Protected Route</Badge>
+            <Badge>Context Isolation Enabled</Badge>
           </div>
         </header>
 

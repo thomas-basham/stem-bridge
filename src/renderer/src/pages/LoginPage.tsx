@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Button, Input } from '@/components/ui';
 import { useAuth } from '@/features/auth/auth-context';
 
 const resolveRedirectPath = (state: unknown): string => {
@@ -33,33 +34,27 @@ export function LoginPage() {
       </div>
 
       <form className="auth-form" onSubmit={handleSubmit}>
-        <label className="field-group">
-          <span>Email</span>
-          <input
-            className="text-input"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="producer@stembridge.app"
-            required
-          />
-        </label>
+        <Input
+          label="Email"
+          type="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          placeholder="producer@stembridge.app"
+          required
+        />
 
-        <label className="field-group">
-          <span>Password</span>
-          <input
-            className="text-input"
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="Enter password"
-            required
-          />
-        </label>
+        <Input
+          label="Password"
+          type="password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          placeholder="Enter password"
+          required
+        />
 
-        <button type="submit" className="control-button control-button--wide">
+        <Button type="submit" fullWidth>
           Continue to Projects
-        </button>
+        </Button>
       </form>
 
       <div className="auth-card__footer">

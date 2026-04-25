@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router-dom';
-import { EmptyState } from '@/components/ui/EmptyState';
+import { EmptyState, LoadingSpinner } from '@/components/ui';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { WaveformPlayer } from '@/components/player/WaveformPlayer';
 import { SectionCard } from '@/components/ui/SectionCard';
@@ -33,7 +33,9 @@ export function ProjectDetailPage() {
           </Link>
         }
       >
-        <div className="loading-state">Loading project workspace...</div>
+        <div className="loading-state">
+          <LoadingSpinner label="Loading project workspace..." />
+        </div>
       </PageContainer>
     );
   }

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { ProjectSummary } from '@shared/types';
-import { EmptyState } from '@/components/ui/EmptyState';
+import { Badge, EmptyState, LoadingSpinner } from '@/components/ui';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { StatCard } from '@/components/ui/StatCard';
@@ -19,7 +19,11 @@ const formatTimestamp = (isoDate: string): string => {
 
 const renderProjects = (projectsState: ReturnType<typeof useProjects>) => {
   if (projectsState.status === 'loading') {
-    return <div className="loading-state">Loading project library...</div>;
+    return (
+      <div className="loading-state">
+        <LoadingSpinner label="Loading project library..." />
+      </div>
+    );
   }
 
   if (projectsState.status === 'error') {
@@ -55,7 +59,7 @@ const renderProjects = (projectsState: ReturnType<typeof useProjects>) => {
               </div>
 
               <div className="project-list__meta">
-                <span className="status-pill">{project.status}</span>
+                <Badge tone="teal">{project.status}</Badge>
                 <span>{project.versionCount} versions</span>
                 <span>{formatTimestamp(project.lastUpdated)}</span>
               </div>
@@ -96,7 +100,7 @@ export function ProjectsPage() {
       eyebrow="Projects"
       title="Project Library"
       description="Browse active workspaces, jump into route-protected project detail views, and keep desktop collaboration flows organized."
-      actions={<span className="tag">Authenticated Navigation</span>}
+      actions={<Badge>Authenticated Navigation</Badge>}
     >
       <div className="stats-grid">
         <StatCard
@@ -123,7 +127,7 @@ export function ProjectsPage() {
         <SectionCard
           title="Active Projects"
           subtitle="Projects route into a dedicated detail view with placeholder collaboration panels."
-          action={<span className="tag">/projects/:projectId</span>}
+          action={<Badge tone="violet">/projects/:projectId</Badge>}
         >
           {renderProjects(projectsState)}
         </SectionCard>
