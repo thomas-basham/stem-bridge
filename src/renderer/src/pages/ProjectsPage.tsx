@@ -1,157 +1,285 @@
-import { Link } from 'react-router-dom';
+import { useState, type FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import type { ProjectSummary } from '@shared/types';
-import { Badge, EmptyState, LoadingSpinner } from '@/components/ui';
+import { Badge, Button, EmptyState, Input, LoadingSpinner, Modal } from '@/components/ui';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { StatCard } from '@/components/ui/StatCard';
+import { getApiErrorMessage } from '@/lib/api';
 import { useProjects } from '@/features/projects/useProjects';
 
-const formatTimestamp = (isoDate: string): string => {
-  const formatter = new Intl.DateTimeFormat('en-US', {
+const formatDate = (isoDate: string | undefined): string => {
+  if (!isoDate) {
+    return 'Not available';
+  }
+
+  const date = new Date(isoDate);
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Not available';
+  }
+
+  return new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-
-  return formatter.format(new Date(isoDate));
+    year: 'numeric',
+  }).format(date);
 };
 
-const renderProjects = (projectsState: ReturnType<typeof useProjects>) => {
-  if (projectsState.status === 'loading') {
-    return (
-      <div className="loading-state">
-        <LoadingSpinner label="Loading project library..." />
-      </div>
-    );
+const getLatestVersionNumber = (project: ProjectSummary): number | null => {
+  if (project.latestVersion?.versionNumber) {
+    return project.latestVersion.versionNumber;
   }
 
-  if (projectsState.status === 'error') {
-    return (
-      <EmptyState
-        tone="error"
-        title="Projects unavailable"
-        description={projectsState.errorMessage}
-      />
-    );
-  }
+  return project.versionCount > 0 ? project.versionCount : null;
+};
 
-  if (projectsState.data.length === 0) {
-    return (
-      <EmptyState
-        title="No projects yet"
-        description="Create the first protected project route to start sharing versions and files."
-      />
-    );
-  }
+const renderProjectValue = (value: string | number | null | undefined): string => {
+  return value === null || value === undefined || value === '' ? 'Not set' : String(value);
+};
+
+interface CreateProjectModalProps {
+  open: boolean;
+  onClose: () => void;
+  onCreateProject: ReturnType<typeof useProjects>['createProject'];
+}
+
+function CreateProjectModal({ open, onClose, onCreateProject }: CreateProjectModalProps) {
+  const navigate = useNavigate();
+  const [name, setName] = useState('');
+  const [bpm, setBpm] = useState('');
+  const [musicalKey, setMusicalKey] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const resetForm = (): void => {
+    setName('');
+    setBpm('');
+    setMusicalKey('');
+    setErrorMessage(null);
+  };
+
+  const handleClose = (): void => {
+    if (isSubmitting) {
+      return;
+    }
+
+    resetForm();
+    onClose();
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+    event.preventDefault();
+    setIsSubmitting(true);
+    setErrorMessage(null);
+
+    try {
+      const project = await onCreateProject({
+        name,
+        bpm: bpm ? Number(bpm) : undefined,
+        musicalKey: musicalKey.trim() || undefined,
+      });
+
+      resetForm();
+      onClose();
+      navigate(`/projects/${project.id}`);
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, 'Unable to create project.'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
-    <ul className="project-list">
-      {projectsState.data.map((project: ProjectSummary) => (
-        <li key={project.id} className="project-list__item">
-          <Link to={`/projects/${project.id}`} className="project-list__link">
-            <div className="project-list__summary">
-              <div className="project-list__identity">
-                <h4>{project.title}</h4>
-                <p>
-                  Owner: {project.owner} · {project.collaboratorCount} collaborators
-                </p>
-              </div>
+    <Modal
+      open={open}
+      title="New Project"
+      description="Create a workspace for versions, files, collaborators, and notes."
+      onClose={handleClose}
+      footer={
+        <>
+          <Button type="button" variant="ghost" onClick={handleClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button type="submit" form="create-project-form" disabled={isSubmitting}>
+            {isSubmitting ? 'Creating...' : 'Create Project'}
+          </Button>
+        </>
+      }
+    >
+      <form id="create-project-form" className="modal-form" onSubmit={handleSubmit}>
+        <Input
+          label="Project Name"
+          name="name"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="Late Night Mix"
+          disabled={isSubmitting}
+          required
+        />
 
-              <div className="project-list__meta">
-                <Badge tone="teal">{project.status}</Badge>
-                <span>{project.versionCount} versions</span>
-                <span>{formatTimestamp(project.lastUpdated)}</span>
+        <div className="modal-form__grid">
+          <Input
+            label="BPM"
+            name="bpm"
+            type="number"
+            min={1}
+            max={400}
+            value={bpm}
+            onChange={(event) => setBpm(event.target.value)}
+            placeholder="120"
+            disabled={isSubmitting}
+          />
+          <Input
+            label="Musical Key"
+            name="musicalKey"
+            value={musicalKey}
+            onChange={(event) => setMusicalKey(event.target.value)}
+            placeholder="C minor"
+            disabled={isSubmitting}
+          />
+        </div>
+
+        {errorMessage ? (
+          <p className="auth-form__error" role="alert">
+            {errorMessage}
+          </p>
+        ) : null}
+      </form>
+    </Modal>
+  );
+}
+
+function ProjectGrid({ projects }: { projects: ProjectSummary[] }) {
+  return (
+    <div className="project-grid">
+      {projects.map((project) => {
+        const latestVersionNumber = getLatestVersionNumber(project);
+
+        return (
+          <Link key={project.id} to={`/projects/${project.id}`} className="project-card">
+            <div className="project-card__header">
+              <div>
+                <h4>{project.name}</h4>
+                <p>Updated {formatDate(project.updatedAt ?? project.createdAt)}</p>
               </div>
+              <Badge tone={latestVersionNumber ? 'teal' : 'amber'}>
+                {latestVersionNumber ? `v${latestVersionNumber}` : 'No versions'}
+              </Badge>
             </div>
 
-            <span className="project-list__cta">Open Project</span>
+            <div className="project-card__meta">
+              <span>
+                <strong>{renderProjectValue(project.bpm)}</strong>
+                BPM
+              </span>
+              <span>
+                <strong>{renderProjectValue(project.musicalKey)}</strong>
+                Key
+              </span>
+              <span>
+                <strong>{project.collaboratorCount}</strong>
+                Collaborators
+              </span>
+            </div>
+
+            <div className="project-card__footer">
+              <span>Created {formatDate(project.createdAt)}</span>
+              <strong>Open Project</strong>
+            </div>
           </Link>
-        </li>
-      ))}
-    </ul>
+        );
+      })}
+    </div>
   );
-};
+}
 
 export function ProjectsPage() {
   const projectsState = useProjects();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  const projectCount =
-    projectsState.status === 'success' ? String(projectsState.data.length) : '...';
+  const projects = projectsState.data;
+  const isLoading = projectsState.status === 'loading';
+  const projectCount = projectsState.status === 'success' ? String(projects.length) : '...';
   const versionCount =
     projectsState.status === 'success'
-      ? String(
-          projectsState.data.reduce((total, project) => {
-            return total + project.versionCount;
-          }, 0),
-        )
+      ? String(projects.reduce((total, project) => total + project.versionCount, 0))
       : '...';
   const collaboratorCount =
     projectsState.status === 'success'
-      ? String(
-          projectsState.data.reduce((total, project) => {
-            return total + project.collaboratorCount;
-          }, 0),
-        )
+      ? String(projects.reduce((total, project) => total + project.collaboratorCount, 0))
       : '...';
 
   return (
-    <PageContainer
-      eyebrow="Projects"
-      title="Project Library"
-      description="Browse active workspaces, jump into route-protected project detail views, and keep desktop collaboration flows organized."
-      actions={<Badge>Authenticated Navigation</Badge>}
-    >
-      <div className="stats-grid">
-        <StatCard
-          label="Projects"
-          value={projectCount}
-          detail="Authenticated workspaces"
-          tone="teal"
-        />
-        <StatCard
-          label="Versions"
-          value={versionCount}
-          detail="Tracked revisions across sessions"
-          tone="amber"
-        />
-        <StatCard
-          label="Collaborators"
-          value={collaboratorCount}
-          detail="People routed into active projects"
-          tone="slate"
-        />
-      </div>
-
-      <div className="content-grid">
-        <SectionCard
-          title="Active Projects"
-          subtitle="Projects route into a dedicated detail view with placeholder collaboration panels."
-          action={<Badge tone="violet">/projects/:projectId</Badge>}
-        >
-          {renderProjects(projectsState)}
-        </SectionCard>
+    <>
+      <PageContainer
+        eyebrow="Projects"
+        title="Project Dashboard"
+        description="Track your StemBridge workspaces, collaborators, tempo notes, keys, and version activity."
+        actions={
+          <Button type="button" onClick={() => setIsCreateModalOpen(true)}>
+            New Project
+          </Button>
+        }
+      >
+        <div className="stats-grid">
+          <StatCard label="Projects" value={projectCount} detail="Active workspaces" tone="teal" />
+          <StatCard label="Versions" value={versionCount} detail="Latest saved revisions" tone="amber" />
+          <StatCard
+            label="Collaborators"
+            value={collaboratorCount}
+            detail="Project memberships"
+            tone="slate"
+          />
+        </div>
 
         <SectionCard
-          title="Routing Overview"
-          subtitle="The shell separates authenticated project views from public auth pages."
+          title="Your Projects"
+          subtitle="Open a project to manage versions, files, feedback, and collaborators."
+          action={<Badge tone="violet">GET /projects</Badge>}
         >
-          <div className="info-stack">
-            <div className="info-row">
-              <span>Public</span>
-              <strong>/login, /register</strong>
+          {isLoading ? (
+            <div className="loading-state">
+              <LoadingSpinner label="Loading projects..." />
             </div>
-            <div className="info-row">
-              <span>Protected</span>
-              <strong>/projects, /projects/:projectId</strong>
-            </div>
-            <div className="info-row">
-              <span>Fallback</span>
-              <strong>404 page with context-aware navigation</strong>
-            </div>
-          </div>
+          ) : null}
+
+          {projectsState.status === 'error' ? (
+            <EmptyState
+              tone="error"
+              title="Projects unavailable"
+              description={projectsState.errorMessage}
+              action={
+                <Button type="button" variant="secondary" onClick={() => void projectsState.refresh()}>
+                  Retry
+                </Button>
+              }
+            />
+          ) : null}
+
+          {projectsState.status === 'success' && projects.length === 0 ? (
+            <EmptyState
+              title="No projects yet"
+              description="Create a project to start collecting versions, files, and collaborator feedback."
+              action={
+                <Button type="button" onClick={() => setIsCreateModalOpen(true)}>
+                  New Project
+                </Button>
+              }
+            />
+          ) : null}
+
+          {projectsState.status === 'success' && projects.length > 0 ? (
+            <ProjectGrid projects={projects} />
+          ) : null}
         </SectionCard>
-      </div>
-    </PageContainer>
+      </PageContainer>
+
+      <CreateProjectModal
+        open={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreateProject={projectsState.createProject}
+      />
+    </>
   );
 }

@@ -1,66 +1,136 @@
 import { useEffect, useRef, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { versionsService } from '@/features/projects/versionsService';
+import type { VersionFileAsset } from '@/types/api';
 
 interface WaveformPlayerProps {
-  audioUrl?: string;
+  versionId: string;
+  mixFile?: VersionFileAsset;
 }
 
-export function WaveformPlayer({ audioUrl }: WaveformPlayerProps) {
+const formatTime = (seconds: number): string => {
+  if (!Number.isFinite(seconds) || seconds < 0) {
+    return '0:00';
+  }
+
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60)
+    .toString()
+    .padStart(2, '0');
+
+  return `${minutes}:${remainingSeconds}`;
+};
+
+export function WaveformPlayer({ versionId, mixFile }: WaveformPlayerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
-  const [isReady, setIsReady] = useState(false);
+  const objectUrlRef = useRef<string | null>(null);
+  const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!audioUrl || !containerRef.current) {
-      setIsReady(false);
+    let isCancelled = false;
+    const container = containerRef.current;
+
+    const resetPlayer = (): void => {
+      wavesurferRef.current?.destroy();
+      wavesurferRef.current = null;
+
+      if (objectUrlRef.current) {
+        window.URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
+
       setIsPlaying(false);
+      setCurrentTime(0);
+      setDuration(0);
+    };
+
+    resetPlayer();
+
+    if (!mixFile || !container) {
+      setStatus('idle');
+      setErrorMessage(null);
       return;
     }
 
-    const wavesurfer = WaveSurfer.create({
-      container: containerRef.current,
-      waveColor: '#29515a',
-      progressColor: '#65f4d7',
-      cursorColor: '#f6b85e',
-      barWidth: 3,
-      barGap: 2,
-      height: 112,
-      normalize: true,
-      dragToSeek: true,
-    });
+    setStatus('loading');
+    setErrorMessage(null);
 
-    wavesurferRef.current = wavesurfer;
-    wavesurfer.load(audioUrl);
+    const initializeWaveform = async (): Promise<void> => {
+      try {
+        const download = await versionsService.downloadFile({ versionId, fileAsset: mixFile });
 
-    const handleReady = (): void => setIsReady(true);
-    const handlePlay = (): void => setIsPlaying(true);
-    const handlePause = (): void => setIsPlaying(false);
+        if (isCancelled) {
+          return;
+        }
 
-    wavesurfer.on('ready', handleReady);
-    wavesurfer.on('play', handlePlay);
-    wavesurfer.on('pause', handlePause);
-    wavesurfer.on('finish', handlePause);
+        const objectUrl = window.URL.createObjectURL(download.blob);
+        objectUrlRef.current = objectUrl;
+
+        const wavesurfer = WaveSurfer.create({
+          container,
+          waveColor: '#29515a',
+          progressColor: '#65f4d7',
+          cursorColor: '#f6b85e',
+          barWidth: 3,
+          barGap: 2,
+          height: 132,
+          normalize: true,
+          dragToSeek: true,
+        });
+
+        wavesurferRef.current = wavesurfer;
+
+        wavesurfer.on('ready', (readyDuration) => {
+          setDuration(readyDuration || wavesurfer.getDuration());
+          setStatus('ready');
+        });
+        wavesurfer.on('play', () => setIsPlaying(true));
+        wavesurfer.on('pause', () => setIsPlaying(false));
+        wavesurfer.on('finish', () => {
+          setIsPlaying(false);
+          setCurrentTime(0);
+        });
+        wavesurfer.on('timeupdate', (time) => setCurrentTime(time));
+        wavesurfer.on('seeking', (time) => setCurrentTime(time));
+        wavesurfer.on('error', (error) => {
+          setStatus('error');
+          setErrorMessage(error instanceof Error ? error.message : 'Unable to load waveform.');
+        });
+
+        await wavesurfer.load(objectUrl);
+      } catch (error) {
+        if (!isCancelled) {
+          setStatus('error');
+          setErrorMessage(error instanceof Error ? error.message : 'Unable to load waveform.');
+        }
+      }
+    };
+
+    void initializeWaveform();
 
     return () => {
-      wavesurfer.destroy();
-      wavesurferRef.current = null;
-      setIsReady(false);
-      setIsPlaying(false);
+      isCancelled = true;
+      resetPlayer();
     };
-  }, [audioUrl]);
+  }, [mixFile, versionId]);
 
   const handleTogglePlayback = (): void => {
     wavesurferRef.current?.playPause();
   };
 
-  if (!audioUrl) {
+  if (!mixFile) {
     return (
       <div className="waveform-player waveform-player--empty">
         <EmptyState
-          title="No version selected"
-          description="The waveform panel is wired with wavesurfer.js and ready for mixdown playback when version audio is available."
+          title="No mix file"
+          description="Upload a MIX file to this version to render a waveform preview."
         />
       </div>
     );
@@ -68,20 +138,29 @@ export function WaveformPlayer({ audioUrl }: WaveformPlayerProps) {
 
   return (
     <div className="waveform-player">
-      <div ref={containerRef} className="waveform-player__canvas" />
+      <div className="waveform-player__frame">
+        <div ref={containerRef} className="waveform-player__canvas" />
+        {status === 'loading' ? (
+          <div className="waveform-player__loading">
+            <LoadingSpinner label="Preparing waveform..." />
+          </div>
+        ) : null}
+      </div>
 
       <div className="waveform-player__controls">
         <button
           type="button"
           className="control-button"
           onClick={handleTogglePlayback}
-          disabled={!isReady}
+          disabled={status !== 'ready'}
         >
           {isPlaying ? 'Pause Preview' : 'Play Preview'}
         </button>
 
         <span className="waveform-player__status">
-          {isReady ? 'Waveform ready' : 'Preparing waveform'}
+          {status === 'error'
+            ? errorMessage
+            : `${formatTime(currentTime)} / ${formatTime(duration)}`}
         </span>
       </div>
     </div>

@@ -11,16 +11,37 @@ export interface DesktopMetadata {
   platform: string;
 }
 
-export type ProjectStatus = 'Tracking' | 'Mix Prep' | 'In Review';
-
 export interface ProjectSummary {
   id: string;
-  title: string;
-  owner: string;
+  name: string;
+  bpm?: number | null;
+  musicalKey?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  owner?: {
+    id: string;
+    email: string;
+    name?: string;
+  };
   collaboratorCount: number;
   versionCount: number;
-  lastUpdated: string;
-  status: ProjectStatus;
+  collaborators?: Array<{
+    id: string;
+    joinedAt: string;
+    user: {
+      id: string;
+      email: string;
+      name?: string;
+    };
+  }>;
+  latestVersion?: {
+    id: string;
+    versionNumber: number;
+    notes?: string | null;
+    createdAt: string;
+    fileAssetCount?: number;
+    commentCount?: number;
+  } | null;
 }
 
 export interface StemBridgeDesktopApi {

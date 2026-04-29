@@ -1,7 +1,6 @@
-export type ProjectStatus = 'Tracking' | 'Mix Prep' | 'In Review';
 export type ProjectRole = 'owner' | 'admin' | 'collaborator' | 'viewer';
-export type SongVersionStatus = 'draft' | 'uploaded' | 'processing' | 'ready' | 'archived';
 export type FileAssetKind = 'stem' | 'mixdown' | 'midi' | 'sample' | 'project' | 'other';
+export type VersionFileAssetType = 'STEM' | 'MIX' | 'MIDI' | 'SAMPLE' | 'OTHER';
 export type CommentStatus = 'open' | 'resolved';
 export type InviteStatus = 'pending' | 'accepted' | 'expired' | 'revoked';
 
@@ -12,7 +11,7 @@ export interface ApiResponse<T> {
 
 export interface User {
   id: string;
-  name: string;
+  name?: string;
   email: string;
   avatarUrl?: string | null;
   createdAt?: string;
@@ -21,16 +20,27 @@ export interface User {
 
 export interface Project {
   id: string;
-  title: string;
-  owner: string;
-  ownerId?: string;
-  description?: string | null;
-  status: ProjectStatus;
+  name: string;
+  bpm?: number | null;
+  musicalKey?: string | null;
+  owner?: User;
   collaboratorCount: number;
   versionCount: number;
-  lastUpdated: string;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  collaborators?: Array<{
+    id: string;
+    joinedAt: string;
+    user: User;
+  }>;
+  latestVersion?: {
+    id: string;
+    versionNumber: number;
+    notes?: string | null;
+    createdAt: string;
+    fileAssetCount?: number;
+    commentCount?: number;
+  } | null;
 }
 
 export interface ProjectMember {
@@ -45,16 +55,35 @@ export interface ProjectMember {
 export interface SongVersion {
   id: string;
   projectId: string;
-  title: string;
   versionNumber: number;
-  status: SongVersionStatus;
-  durationSeconds?: number | null;
-  waveformUrl?: string | null;
-  audioUrl?: string | null;
-  createdById: string;
-  createdBy?: User;
+  notes?: string | null;
   createdAt: string;
-  updatedAt?: string;
+  createdBy: User;
+  fileAssetCount?: number;
+  commentCount?: number;
+  fileAssets?: VersionFileAsset[];
+  comments?: VersionComment[];
+}
+
+export interface VersionFileAsset {
+  id: string;
+  versionId?: string;
+  name: string;
+  originalName: string;
+  type: VersionFileAssetType;
+  mimeType: string;
+  sizeBytes: number;
+  storageKey: string;
+  url: string;
+  createdAt: string;
+}
+
+export interface VersionComment {
+  id: string;
+  timestampSeconds: number;
+  text: string;
+  createdAt: string;
+  author: User;
 }
 
 export interface FileAsset {

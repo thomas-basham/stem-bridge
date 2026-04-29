@@ -11,6 +11,8 @@ import type {
   ProjectMember,
   SongVersion,
   User,
+  VersionFileAsset,
+  VersionFileAssetType,
 } from '@/types/api';
 
 const baseURL = import.meta.env.VITE_API_BASE_URL?.trim() || 'http://localhost:4000';
@@ -67,14 +69,48 @@ export interface LoginPayload {
 }
 
 export interface RegisterPayload {
-  name: string;
+  name?: string;
   email: string;
   password: string;
 }
 
+interface CurrentUserResponse {
+  user: User;
+}
+
+interface ProjectsResponse {
+  projects: Project[];
+}
+
+interface ProjectResponse {
+  project: Project;
+}
+
+interface VersionsResponse {
+  versions: SongVersion[];
+}
+
+interface VersionResponse {
+  version: SongVersion;
+}
+
+interface FileUploadResponse {
+  file: VersionFileAsset;
+}
+
+export interface FileDownloadResponse {
+  blob: Blob;
+  fileName: string;
+}
+
 export interface ProjectPayload {
-  title: string;
-  description?: string;
+  name: string;
+  bpm?: number;
+  musicalKey?: string;
+}
+
+export interface CreateVersionPayload {
+  notes?: string;
 }
 
 export interface CommentPayload {
@@ -109,7 +145,10 @@ export const authApi = {
     return authResponse;
   },
 
-  me: (): Promise<User> => apiRequest<User>({ method: 'GET', url: '/auth/me' }),
+  async me(): Promise<User> {
+    const response = await apiRequest<CurrentUserResponse>({ method: 'GET', url: '/auth/me' });
+    return response.user;
+  },
 
   logout(): void {
     clearAuthSession();
@@ -117,13 +156,27 @@ export const authApi = {
 };
 
 export const projectsApi = {
-  list: (): Promise<Project[]> => apiRequest<Project[]>({ method: 'GET', url: '/projects' }),
+  async list(): Promise<Project[]> {
+    const response = await apiRequest<ProjectsResponse>({ method: 'GET', url: '/projects' });
+    return response.projects;
+  },
 
-  getById: (projectId: string): Promise<Project> =>
-    apiRequest<Project>({ method: 'GET', url: `/projects/${projectId}` }),
+  async getById(projectId: string): Promise<Project> {
+    const response = await apiRequest<ProjectResponse>({
+      method: 'GET',
+      url: `/projects/${projectId}`,
+    });
+    return response.project;
+  },
 
-  create: (payload: ProjectPayload): Promise<Project> =>
-    apiRequest<Project>({ method: 'POST', url: '/projects', data: payload }),
+  async create(payload: ProjectPayload): Promise<Project> {
+    const response = await apiRequest<ProjectResponse>({
+      method: 'POST',
+      url: '/projects',
+      data: payload,
+    });
+    return response.project;
+  },
 
   update: (projectId: string, payload: Partial<ProjectPayload>): Promise<Project> =>
     apiRequest<Project>({ method: 'PATCH', url: `/projects/${projectId}`, data: payload }),
@@ -131,8 +184,22 @@ export const projectsApi = {
   members: (projectId: string): Promise<ProjectMember[]> =>
     apiRequest<ProjectMember[]>({ method: 'GET', url: `/projects/${projectId}/members` }),
 
-  versions: (projectId: string): Promise<SongVersion[]> =>
-    apiRequest<SongVersion[]>({ method: 'GET', url: `/projects/${projectId}/versions` }),
+  async versions(projectId: string): Promise<SongVersion[]> {
+    const response = await apiRequest<VersionsResponse>({
+      method: 'GET',
+      url: `/projects/${projectId}/versions`,
+    });
+    return response.versions;
+  },
+
+  async createVersion(projectId: string, payload: CreateVersionPayload): Promise<SongVersion> {
+    const response = await apiRequest<VersionResponse>({
+      method: 'POST',
+      url: `/projects/${projectId}/versions`,
+      data: payload,
+    });
+    return response.version;
+  },
 
   files: (projectId: string): Promise<FileAsset[]> =>
     apiRequest<FileAsset[]>({ method: 'GET', url: `/projects/${projectId}/files` }),
@@ -145,6 +212,78 @@ export const projectsApi = {
 
   invites: (projectId: string): Promise<Invite[]> =>
     apiRequest<Invite[]>({ method: 'GET', url: `/projects/${projectId}/invites` }),
+};
+
+export const versionsApi = {
+  async getById(versionId: string): Promise<SongVersion> {
+    const response = await apiRequest<VersionResponse>({
+      method: 'GET',
+      url: `/versions/${versionId}`,
+    });
+    return response.version;
+  },
+
+  async uploadFile(
+    versionId: string,
+    payload: {
+      file: File;
+      type: VersionFileAssetType;
+      onProgress?: (progress: number) => void;
+    },
+  ): Promise<VersionFileAsset> {
+    const formData = new FormData();
+    formData.append('file', payload.file);
+    formData.append('type', payload.type);
+
+    const response = await apiRequest<FileUploadResponse>({
+      method: 'POST',
+      url: `/versions/${versionId}/files/upload`,
+      data: formData,
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress(progressEvent) {
+        if (!payload.onProgress || !progressEvent.total) {
+          return;
+        }
+
+        payload.onProgress(Math.round((progressEvent.loaded / progressEvent.total) * 100));
+      },
+    });
+
+    return response.file;
+  },
+
+  async downloadFile(versionId: string, fileId: string): Promise<FileDownloadResponse> {
+    const response = await apiClient.request<Blob>({
+      method: 'GET',
+      url: `/versions/${versionId}/files/${fileId}/download`,
+      responseType: 'blob',
+    });
+
+    return {
+      blob: response.data,
+      fileName: getDownloadFileName(response.headers['content-disposition']) || 'download',
+    };
+  },
+};
+
+const getDownloadFileName = (contentDisposition: unknown): string | null => {
+  if (typeof contentDisposition !== 'string') {
+    return null;
+  }
+
+  const encodedFileName = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+
+  if (encodedFileName) {
+    try {
+      return decodeURIComponent(encodedFileName);
+    } catch {
+      return encodedFileName;
+    }
+  }
+
+  return contentDisposition.match(/filename="([^"]+)"/i)?.[1] ?? null;
 };
 
 export const commentsApi = {

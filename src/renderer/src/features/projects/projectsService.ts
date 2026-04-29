@@ -1,48 +1,11 @@
 import axios from 'axios';
 import type { ProjectSummary } from '@shared/types';
 import { getApiErrorMessage, projectsApi } from '@/lib/api';
-
-const mockProjects: ProjectSummary[] = [
-  {
-    id: 'atlas-after-hours',
-    title: 'Atlas After Hours',
-    owner: 'Nova Lane',
-    collaboratorCount: 3,
-    versionCount: 6,
-    lastUpdated: '2026-04-21T23:40:00.000Z',
-    status: 'In Review',
-  },
-  {
-    id: 'electric-harbor',
-    title: 'Electric Harbor',
-    owner: 'Kai Mercer',
-    collaboratorCount: 5,
-    versionCount: 11,
-    lastUpdated: '2026-04-21T18:15:00.000Z',
-    status: 'Mix Prep',
-  },
-  {
-    id: 'neon-saturn',
-    title: 'Neon Saturn',
-    owner: 'Ivy Rhodes',
-    collaboratorCount: 2,
-    versionCount: 4,
-    lastUpdated: '2026-04-20T16:10:00.000Z',
-    status: 'Tracking',
-  },
-];
-
-const useMockData = import.meta.env.VITE_USE_MOCK_DATA !== 'false';
-
-const wait = async (durationMs: number): Promise<void> => {
-  await new Promise<void>((resolve) => {
-    window.setTimeout(resolve, durationMs);
-  });
-};
+import { mockProjects, useMockProjectData, wait } from './mockProjectData';
 
 export const projectsService = {
   async list(): Promise<ProjectSummary[]> {
-    if (useMockData) {
+    if (useMockProjectData) {
       await wait(450);
       return mockProjects;
     }
@@ -57,8 +20,34 @@ export const projectsService = {
       throw error instanceof Error ? error : new Error('Unable to load projects.');
     }
   },
+  async create(payload: { name: string; bpm?: number; musicalKey?: string }): Promise<ProjectSummary> {
+    if (useMockProjectData) {
+      await wait(250);
+      return {
+        id: window.crypto.randomUUID(),
+        name: payload.name,
+        bpm: payload.bpm ?? null,
+        musicalKey: payload.musicalKey ?? null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        collaboratorCount: 1,
+        versionCount: 0,
+        latestVersion: null,
+      };
+    }
+
+    try {
+      return await projectsApi.create(payload);
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(getApiErrorMessage(error, 'Unable to create project.'));
+      }
+
+      throw error instanceof Error ? error : new Error('Unable to create project.');
+    }
+  },
   async getById(projectId: string): Promise<ProjectSummary | null> {
-    if (useMockData) {
+    if (useMockProjectData) {
       await wait(220);
       return mockProjects.find((project) => project.id === projectId) ?? null;
     }
