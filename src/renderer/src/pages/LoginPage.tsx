@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button, Input } from '@/components/ui';
 import { useAuth } from '@/features/auth/auth-context';
@@ -15,14 +15,24 @@ const resolveRedirectPath = (state: unknown): string => {
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
-  const [email, setEmail] = useState('producer@stembridge.app');
-  const [password, setPassword] = useState('password123');
+  const { clearError, error, isLoading, login } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
+  useEffect(() => {
+    clearError();
+  }, [clearError]);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
-    login({ email, password });
-    navigate(resolveRedirectPath(location.state), { replace: true });
+
+    try {
+      await login({ email, password });
+      navigate(resolveRedirectPath(location.state), { replace: true });
+    } catch {
+      // Error state is owned by the auth store and rendered below.
+    }
   };
 
   return (
@@ -30,30 +40,55 @@ export function LoginPage() {
       <div className="auth-card__header">
         <p className="auth-card__eyebrow">Login</p>
         <h2>Open your workspace</h2>
-        <p>Use the placeholder form to enter the protected project routes in the desktop shell.</p>
+        <p>Sign in with your StemBridge account to continue to your project workspace.</p>
       </div>
 
       <form className="auth-form" onSubmit={handleSubmit}>
         <Input
           label="Email"
           type="email"
+          name="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           placeholder="producer@stembridge.app"
+          autoComplete="email"
+          disabled={isLoading}
           required
         />
 
-        <Input
-          label="Password"
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          placeholder="Enter password"
-          required
-        />
+        <div className="auth-password-field">
+          <Input
+            label="Password"
+            type={showPassword ? 'text' : 'password'}
+            name="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="Enter password"
+            autoComplete="current-password"
+            disabled={isLoading}
+            required
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="auth-password-field__toggle"
+            onClick={() => setShowPassword((value) => !value)}
+            disabled={isLoading}
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+          >
+            {showPassword ? 'Hide' : 'Show'}
+          </Button>
+        </div>
 
-        <Button type="submit" fullWidth>
-          Continue to Projects
+        {error ? (
+          <p className="auth-form__error" role="alert">
+            {error}
+          </p>
+        ) : null}
+
+        <Button type="submit" fullWidth disabled={isLoading}>
+          {isLoading ? 'Signing In...' : 'Continue to Projects'}
         </Button>
       </form>
 

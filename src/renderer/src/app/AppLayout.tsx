@@ -5,10 +5,21 @@ import { useDesktopMetadata } from '@/hooks/useDesktopMetadata';
 
 const upcomingWorkspaceItems = ['Versions', 'Files', 'Comments'];
 
+const getUserDisplayName = (user: { name?: string; email?: string } | null): string => {
+  if (user?.name?.trim()) {
+    return user.name.trim();
+  }
+
+  const emailName = user?.email?.split('@')[0]?.trim();
+  return emailName || 'User';
+};
+
 export function AppLayout() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const metadataState = useDesktopMetadata();
+  const displayName = getUserDisplayName(user);
+  const avatarInitial = displayName.slice(0, 1).toUpperCase();
 
   const handleLogout = (): void => {
     logout();
@@ -49,9 +60,9 @@ export function AppLayout() {
         <div className="desktop-sidebar__section">
           <p className="desktop-sidebar__section-label">Signed in as</p>
           <div className="user-chip">
-            <span className="user-chip__avatar">{user?.name.slice(0, 1).toUpperCase()}</span>
+            <span className="user-chip__avatar">{avatarInitial}</span>
             <div>
-              <strong>{user?.name}</strong>
+              <strong>{displayName}</strong>
               <p>{user?.email}</p>
             </div>
           </div>

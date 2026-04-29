@@ -1,19 +1,29 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, Input } from '@/components/ui';
 import { useAuth } from '@/features/auth/auth-context';
 
 export function RegisterPage() {
   const navigate = useNavigate();
-  const { register } = useAuth();
-  const [name, setName] = useState('Nova Lane');
-  const [email, setEmail] = useState('nova@stembridge.app');
-  const [password, setPassword] = useState('password123');
+  const { clearError, error, isLoading, register } = useAuth();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
+  useEffect(() => {
+    clearError();
+  }, [clearError]);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
-    register({ name, email, password });
-    navigate('/projects', { replace: true });
+
+    try {
+      await register({ name, email, password });
+      navigate('/projects', { replace: true });
+    } catch {
+      // Error state is owned by the auth store and rendered below.
+    }
   };
 
   return (
@@ -21,39 +31,67 @@ export function RegisterPage() {
       <div className="auth-card__header">
         <p className="auth-card__eyebrow">Register</p>
         <h2>Create a desktop session</h2>
-        <p>Set up a placeholder account and route directly into the authenticated project workspace.</p>
+        <p>Create a StemBridge account and start from the authenticated project workspace.</p>
       </div>
 
       <form className="auth-form" onSubmit={handleSubmit}>
         <Input
           label="Display Name"
           type="text"
+          name="name"
           value={name}
           onChange={(event) => setName(event.target.value)}
           placeholder="Producer name"
+          autoComplete="name"
+          disabled={isLoading}
           required
         />
 
         <Input
           label="Email"
           type="email"
+          name="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           placeholder="producer@stembridge.app"
+          autoComplete="email"
+          disabled={isLoading}
           required
         />
 
-        <Input
-          label="Password"
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          placeholder="Choose password"
-          required
-        />
+        <div className="auth-password-field">
+          <Input
+            label="Password"
+            type={showPassword ? 'text' : 'password'}
+            name="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="Choose password"
+            autoComplete="new-password"
+            disabled={isLoading}
+            required
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="auth-password-field__toggle"
+            onClick={() => setShowPassword((value) => !value)}
+            disabled={isLoading}
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+          >
+            {showPassword ? 'Hide' : 'Show'}
+          </Button>
+        </div>
 
-        <Button type="submit" fullWidth>
-          Create Account
+        {error ? (
+          <p className="auth-form__error" role="alert">
+            {error}
+          </p>
+        ) : null}
+
+        <Button type="submit" fullWidth disabled={isLoading}>
+          {isLoading ? 'Creating Account...' : 'Create Account'}
         </Button>
       </form>
 
