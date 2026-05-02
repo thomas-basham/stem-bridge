@@ -8,24 +8,40 @@ interface ModalProps {
   description?: string;
   children: ReactNode;
   footer?: ReactNode;
+  closeDisabled?: boolean;
   onClose: () => void;
 }
 
-export function Modal({ open, title, description, children, footer, onClose }: ModalProps) {
+export function Modal({
+  open,
+  title,
+  description,
+  children,
+  footer,
+  closeDisabled = false,
+  onClose,
+}: ModalProps) {
   useEffect(() => {
     if (!open) {
       return;
     }
 
     const handleKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') {
+      if (event.key === 'Escape' && !closeDisabled) {
         onClose();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose, open]);
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [closeDisabled, onClose, open]);
 
   if (!open) {
     return null;
@@ -33,7 +49,13 @@ export function Modal({ open, title, description, children, footer, onClose }: M
 
   return createPortal(
     <div className="ui-modal" role="presentation">
-      <button className="ui-modal__scrim" type="button" aria-label="Close modal" onClick={onClose} />
+      <button
+        className="ui-modal__scrim"
+        type="button"
+        aria-label="Close modal"
+        onClick={closeDisabled ? undefined : onClose}
+        disabled={closeDisabled}
+      />
       <section
         className="ui-modal__panel"
         role="dialog"
@@ -46,7 +68,14 @@ export function Modal({ open, title, description, children, footer, onClose }: M
             <h2 id="ui-modal-title">{title}</h2>
             {description ? <p id="ui-modal-description">{description}</p> : null}
           </div>
-          <Button type="button" variant="ghost" size="sm" onClick={onClose} aria-label="Close modal">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            disabled={closeDisabled}
+            aria-label="Close modal"
+          >
             Close
           </Button>
         </header>

@@ -9,6 +9,8 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   fullWidth?: boolean;
   leadingIcon?: ReactNode;
   trailingIcon?: ReactNode;
+  isLoading?: boolean;
+  loadingLabel?: string;
 }
 
 export function Button({
@@ -17,8 +19,11 @@ export function Button({
   fullWidth = false,
   leadingIcon,
   trailingIcon,
+  isLoading = false,
+  loadingLabel,
   className,
   children,
+  disabled,
   ...props
 }: ButtonProps) {
   const classNames = [
@@ -32,10 +37,11 @@ export function Button({
     .join(' ');
 
   return (
-    <button className={classNames} {...props}>
-      {leadingIcon ? <span className="ui-button__icon">{leadingIcon}</span> : null}
-      <span className="ui-button__label">{children}</span>
-      {trailingIcon ? <span className="ui-button__icon">{trailingIcon}</span> : null}
+    <button className={classNames} disabled={disabled || isLoading} {...props}>
+      {isLoading ? <span className="ui-button__spinner" aria-hidden="true" /> : null}
+      {!isLoading && leadingIcon ? <span className="ui-button__icon">{leadingIcon}</span> : null}
+      <span className="ui-button__label">{isLoading && loadingLabel ? loadingLabel : children}</span>
+      {!isLoading && trailingIcon ? <span className="ui-button__icon">{trailingIcon}</span> : null}
     </button>
   );
 }
