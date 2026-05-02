@@ -112,6 +112,16 @@ interface DeleteCommentResponse {
   commentId: string;
 }
 
+interface InvitesResponse {
+  invites: Invite[];
+}
+
+interface InviteResponse {
+  invite: Invite;
+  token?: string;
+  acceptUrl?: string;
+}
+
 export interface FileDownloadResponse {
   blob: Blob;
   fileName: string;
@@ -134,7 +144,6 @@ export interface CommentPayload {
 
 export interface InvitePayload {
   email: string;
-  role: ProjectMember['role'];
 }
 
 export const authApi = {
@@ -223,8 +232,13 @@ export const projectsApi = {
   activity: (projectId: string): Promise<ActivityEvent[]> =>
     apiRequest<ActivityEvent[]>({ method: 'GET', url: `/projects/${projectId}/activity` }),
 
-  invites: (projectId: string): Promise<Invite[]> =>
-    apiRequest<Invite[]>({ method: 'GET', url: `/projects/${projectId}/invites` }),
+  async invites(projectId: string): Promise<Invite[]> {
+    const response = await apiRequest<InvitesResponse>({
+      method: 'GET',
+      url: `/projects/${projectId}/invites`,
+    });
+    return response.invites;
+  },
 };
 
 export const versionsApi = {
@@ -322,8 +336,22 @@ export const commentsApi = {
 };
 
 export const invitesApi = {
-  create: (projectId: string, payload: InvitePayload): Promise<Invite> =>
-    apiRequest<Invite>({ method: 'POST', url: `/projects/${projectId}/invites`, data: payload }),
+  async list(projectId: string): Promise<Invite[]> {
+    const response = await apiRequest<InvitesResponse>({
+      method: 'GET',
+      url: `/projects/${projectId}/invites`,
+    });
+    return response.invites;
+  },
+
+  async create(projectId: string, payload: InvitePayload): Promise<Invite> {
+    const response = await apiRequest<InviteResponse>({
+      method: 'POST',
+      url: `/projects/${projectId}/invites`,
+      data: payload,
+    });
+    return response.invite;
+  },
 
   revoke: (inviteId: string): Promise<Invite> =>
     apiRequest<Invite>({ method: 'PATCH', url: `/invites/${inviteId}`, data: { status: 'revoked' } }),

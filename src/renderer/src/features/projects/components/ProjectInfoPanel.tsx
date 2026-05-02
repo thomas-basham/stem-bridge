@@ -1,5 +1,5 @@
 import type { ProjectSummary } from '@shared/types';
-import { EmptyState } from '@/components/ui';
+import { CollaboratorsPanel } from './CollaboratorsPanel';
 import {
   formatProjectDate,
   getOwnerLabel,
@@ -45,26 +45,11 @@ export function ProjectInfoPanel({ project }: ProjectInfoPanelProps) {
         </div>
       </div>
 
-      <div className="project-collaborators">
-        <h5>Collaborators</h5>
-        {collaborators.length > 0 ? (
-          <ul>
-            {collaborators.map((collaborator) => (
-              <li key={collaborator.id}>
-                <strong>{collaborator.user.name || collaborator.user.email}</strong>
-                <span>Joined {formatProjectDate(collaborator.joinedAt)}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <EmptyState
-            title="No collaborator list yet"
-            description={`${project.collaboratorCount} collaborator${
-              project.collaboratorCount === 1 ? '' : 's'
-            } on this project.`}
-          />
-        )}
-      </div>
+      <CollaboratorsPanel
+        projectId={project.id}
+        collaborators={collaborators}
+        collaboratorCount={project.collaboratorCount}
+      />
     </aside>
   );
 }

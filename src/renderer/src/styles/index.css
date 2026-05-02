@@ -1086,6 +1086,8 @@ a {
 }
 
 .project-detail-panel__header h4,
+.collaborators-panel__header h4,
+.collaborators-section__header h5,
 .project-collaborators h5 {
   margin: 0;
   letter-spacing: 0;
@@ -1477,6 +1479,114 @@ a {
 
 .project-collaborators h5 {
   font-size: 0.94rem;
+}
+
+.collaborators-panel {
+  display: grid;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.collaborators-panel__header,
+.collaborators-section__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.collaborators-panel__header p {
+  margin: 4px 0 0;
+  color: var(--text-soft);
+  font-size: 0.9rem;
+}
+
+.collaborators-section {
+  display: grid;
+  gap: 12px;
+}
+
+.collaborators-section__header {
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.collaborators-section__header h5 {
+  color: var(--text);
+  font-size: 0.94rem;
+}
+
+.collaborators-section__header span {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.collaborator-list,
+.invite-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.collaborator-list-item,
+.invite-list-item {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.026);
+}
+
+.collaborator-list-item {
+  display: grid;
+  gap: 4px;
+}
+
+.collaborator-list-item strong,
+.collaborator-list-item span,
+.invite-list-item__main strong,
+.invite-list-item__main span,
+.invite-list-item__meta span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.collaborator-list-item span,
+.collaborator-list-item small,
+.invite-list-item__main span,
+.invite-list-item__meta span {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.invite-list-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.invite-list-item__main,
+.invite-list-item__meta {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.invite-list-item__meta {
+  justify-items: end;
+}
+
+.collaborators-panel__loading {
+  display: grid;
+  place-items: center;
+  min-height: 80px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .project-collaborators ul {
@@ -1874,7 +1984,12 @@ a {
   .project-detail-header__stats,
   .selected-version-summary,
   .comment-list-item,
+  .invite-list-item,
   .project-card__meta {
     grid-template-columns: 1fr;
+  }
+
+  .invite-list-item__meta {
+    justify-items: start;
   }
 }

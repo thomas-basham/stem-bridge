@@ -2,7 +2,7 @@ export type ProjectRole = 'owner' | 'admin' | 'collaborator' | 'viewer';
 export type FileAssetKind = 'stem' | 'mixdown' | 'midi' | 'sample' | 'project' | 'other';
 export type VersionFileAssetType = 'STEM' | 'MIX' | 'MIDI' | 'SAMPLE' | 'OTHER';
 export type CommentStatus = 'open' | 'resolved';
-export type InviteStatus = 'pending' | 'accepted' | 'expired' | 'revoked';
+export type InviteStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED' | 'REVOKED';
 
 export interface ApiResponse<T> {
   message: string;
@@ -129,11 +129,9 @@ export interface Invite {
   id: string;
   projectId: string;
   email: string;
-  role: ProjectRole;
   status: InviteStatus;
-  invitedById: string;
   invitedBy?: User;
-  expiresAt?: string | null;
+  expiresAt: string;
   createdAt: string;
 }
 
