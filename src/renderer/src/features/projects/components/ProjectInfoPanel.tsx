@@ -1,4 +1,5 @@
 import type { ProjectSummary } from '@shared/types';
+import { ActivityFeed } from './ActivityFeed';
 import { CollaboratorsPanel } from './CollaboratorsPanel';
 import {
   formatProjectDate,
@@ -50,6 +51,8 @@ export function ProjectInfoPanel({ project }: ProjectInfoPanelProps) {
         collaborators={collaborators}
         collaboratorCount={project.collaboratorCount}
       />
+
+      <ActivityFeed projectId={project.id} />
     </aside>
   );
 }

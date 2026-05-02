@@ -122,6 +122,16 @@ interface InviteResponse {
   acceptUrl?: string;
 }
 
+interface ActivityResponse {
+  events: ActivityEvent[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    totalItems: number;
+    totalPages: number;
+  };
+}
+
 export interface FileDownloadResponse {
   blob: Blob;
   fileName: string;
@@ -144,6 +154,11 @@ export interface CommentPayload {
 
 export interface InvitePayload {
   email: string;
+}
+
+export interface ActivityQuery {
+  page?: number;
+  pageSize?: number;
 }
 
 export const authApi = {
@@ -229,8 +244,17 @@ export const projectsApi = {
   comments: (projectId: string): Promise<Comment[]> =>
     apiRequest<Comment[]>({ method: 'GET', url: `/projects/${projectId}/comments` }),
 
-  activity: (projectId: string): Promise<ActivityEvent[]> =>
-    apiRequest<ActivityEvent[]>({ method: 'GET', url: `/projects/${projectId}/activity` }),
+  async activity(projectId: string, query: ActivityQuery = {}): Promise<ActivityEvent[]> {
+    const response = await apiRequest<ActivityResponse>({
+      method: 'GET',
+      url: `/projects/${projectId}/activity`,
+      params: {
+        page: query.page ?? 1,
+        pageSize: query.pageSize ?? 20,
+      },
+    });
+    return response.events;
+  },
 
   async invites(projectId: string): Promise<Invite[]> {
     const response = await apiRequest<InvitesResponse>({

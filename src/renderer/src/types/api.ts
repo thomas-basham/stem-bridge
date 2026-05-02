@@ -3,6 +3,16 @@ export type FileAssetKind = 'stem' | 'mixdown' | 'midi' | 'sample' | 'project' |
 export type VersionFileAssetType = 'STEM' | 'MIX' | 'MIDI' | 'SAMPLE' | 'OTHER';
 export type CommentStatus = 'open' | 'resolved';
 export type InviteStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED' | 'REVOKED';
+export type ActivityEventType =
+  | 'PROJECT_CREATED'
+  | 'PROJECT_UPDATED'
+  | 'MEMBER_ADDED'
+  | 'MEMBER_REMOVED'
+  | 'INVITE_SENT'
+  | 'INVITE_ACCEPTED'
+  | 'VERSION_CREATED'
+  | 'FILE_UPLOADED'
+  | 'COMMENT_ADDED';
 
 export interface ApiResponse<T> {
   message: string;
@@ -116,12 +126,8 @@ export interface Comment {
 
 export interface ActivityEvent {
   id: string;
-  projectId: string;
-  actorId: string;
-  actor?: User;
-  type: string;
-  message: string;
-  metadata?: Record<string, unknown>;
+  type: ActivityEventType | string;
+  metadata?: Record<string, unknown> | null;
   createdAt: string;
 }
 
