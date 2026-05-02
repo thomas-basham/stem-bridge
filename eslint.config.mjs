@@ -31,6 +31,12 @@ export default tseslint.config(
     },
   },
   {
+    files: ['src/renderer/src/**/*.test.{ts,tsx}', 'src/renderer/src/test/**/*.{ts,tsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+  {
     files: ['src/main/**/*.ts', 'src/preload/**/*.ts', 'src/shared/**/*.ts', 'electron.vite.config.ts'],
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     languageOptions: {
