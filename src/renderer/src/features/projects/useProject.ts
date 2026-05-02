@@ -44,6 +44,12 @@ export function useProject(projectId: string | undefined): ProjectState {
     }
 
     const loadProject = async (): Promise<void> => {
+      setState({
+        status: 'loading',
+        data: null,
+        errorMessage: null,
+      });
+
       try {
         const project = await projectsService.getById(projectId);
 

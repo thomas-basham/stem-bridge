@@ -1,4 +1,5 @@
-import { versionFileTypes, type PendingUploadFile } from './uploadTypes';
+import { FILE_TYPE_LABELS, UPLOAD_FILE_TYPES } from '@/constants/app-constants';
+import type { PendingUploadFile } from './uploadTypes';
 import type { VersionFileAssetType } from '@/types/api';
 
 interface UploadFileListProps {
@@ -51,9 +52,9 @@ export function UploadFileList({
               }
               disabled={disabled || uploadFile.status === 'uploading' || uploadFile.status === 'success'}
             >
-              {versionFileTypes.map((type) => (
+              {UPLOAD_FILE_TYPES.map((type) => (
                 <option key={type} value={type}>
-                  {type}
+                  {FILE_TYPE_LABELS[type]}
                 </option>
               ))}
             </select>

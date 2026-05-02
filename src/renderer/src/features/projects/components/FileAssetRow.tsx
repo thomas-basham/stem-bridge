@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Badge, useToast } from '@/components/ui';
+import { FILE_TYPE_LABELS, PRIMARY_MIX_FILE_TYPE } from '@/constants/app-constants';
 import { versionsService } from '@/features/projects/versionsService';
 import { triggerBlobDownload } from '@/lib/file-download';
 import type { VersionFileAsset } from '@/types/api';
@@ -59,7 +60,9 @@ export function FileAssetRow({
       </div>
 
       <div className="file-asset-row__meta">
-        <Badge tone={fileAsset.type === 'MIX' ? 'teal' : 'neutral'}>{fileAsset.type}</Badge>
+        <Badge tone={fileAsset.type === PRIMARY_MIX_FILE_TYPE ? 'teal' : 'neutral'}>
+          {FILE_TYPE_LABELS[fileAsset.type]}
+        </Badge>
         {isWaveformSource ? <Badge tone="amber">Waveform Source</Badge> : null}
         <span>{formatFileSize(fileAsset.sizeBytes)}</span>
         <button

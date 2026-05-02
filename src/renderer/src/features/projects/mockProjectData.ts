@@ -1,7 +1,8 @@
 import type { ProjectSummary } from '@shared/types';
+import { appConfig } from '@/config/app-config';
 import type { SongVersion } from '@/types/api';
 
-export const useMockProjectData = import.meta.env.VITE_USE_MOCK_DATA === 'true';
+export const shouldUseMockProjectData = appConfig.useMockData;
 
 export const wait = async (durationMs: number): Promise<void> => {
   await new Promise<void>((resolve) => {

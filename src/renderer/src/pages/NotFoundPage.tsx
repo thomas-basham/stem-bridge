@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom';
+import { APP_ROUTES } from '@/constants/app-constants';
 import { useAuth } from '@/features/auth/auth-context';
 
 export function NotFoundPage() {
   const { isAuthenticated } = useAuth();
-  const returnPath = isAuthenticated ? '/projects' : '/login';
+  const returnPath = isAuthenticated ? APP_ROUTES.projects : APP_ROUTES.login;
   const returnLabel = isAuthenticated ? 'Back to Projects' : 'Back to Login';
 
   return (

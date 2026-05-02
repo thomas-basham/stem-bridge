@@ -1,41 +1,47 @@
-import axios from 'axios';
-import { getApiErrorMessage, projectsApi, type ActivityQuery } from '@/lib/api';
+import {
+  ACTIVITY_EVENT_TYPES,
+  ACTIVITY_METADATA_KEYS,
+  DEFAULT_ACTIVITY_QUERY,
+  PRIMARY_MIX_FILE_TYPE,
+} from '@/constants/app-constants';
+import { projectsApi, type ActivityQuery } from '@/lib/api';
 import type { ActivityEvent } from '@/types/api';
-import { useMockProjectData, wait } from './mockProjectData';
+import { shouldUseMockProjectData, wait } from './mockProjectData';
+import { toProjectServiceError } from './project-service-error';
 
 const mockActivityByProjectId: Record<string, ActivityEvent[]> = {
   'atlas-after-hours': [
     {
       id: 'atlas-activity-comment',
-      type: 'COMMENT_ADDED',
+      type: ACTIVITY_EVENT_TYPES.commentAdded,
       metadata: {
         versionId: 'atlas-v6',
-        timestampSeconds: 74.5,
+        [ACTIVITY_METADATA_KEYS.timestampSeconds]: 74.5,
       },
       createdAt: '2026-05-01T19:15:00.000Z',
     },
     {
       id: 'atlas-activity-invite',
-      type: 'INVITE_SENT',
+      type: ACTIVITY_EVENT_TYPES.inviteSent,
       metadata: {
-        email: 'mix.engineer@example.com',
+        [ACTIVITY_METADATA_KEYS.email]: 'mix.engineer@example.com',
       },
       createdAt: '2026-05-01T17:35:00.000Z',
     },
     {
       id: 'atlas-activity-file',
-      type: 'FILE_UPLOADED',
+      type: ACTIVITY_EVENT_TYPES.fileUploaded,
       metadata: {
-        name: 'atlas-after-hours-mix-v6.wav',
-        type: 'MIX',
+        [ACTIVITY_METADATA_KEYS.fileName]: 'atlas-after-hours-mix-v6.wav',
+        [ACTIVITY_METADATA_KEYS.fileType]: PRIMARY_MIX_FILE_TYPE,
       },
       createdAt: '2026-04-21T23:46:00.000Z',
     },
     {
       id: 'atlas-activity-version',
-      type: 'VERSION_CREATED',
+      type: ACTIVITY_EVENT_TYPES.versionCreated,
       metadata: {
-        versionNumber: 6,
+        [ACTIVITY_METADATA_KEYS.versionNumber]: 6,
       },
       createdAt: '2026-04-21T23:40:00.000Z',
     },
@@ -43,9 +49,9 @@ const mockActivityByProjectId: Record<string, ActivityEvent[]> = {
   'electric-harbor': [
     {
       id: 'electric-activity-version',
-      type: 'VERSION_CREATED',
+      type: ACTIVITY_EVENT_TYPES.versionCreated,
       metadata: {
-        versionNumber: 11,
+        [ACTIVITY_METADATA_KEYS.versionNumber]: 11,
       },
       createdAt: '2026-04-21T18:15:00.000Z',
     },
@@ -60,11 +66,14 @@ const sortActivityNewestFirst = (events: ActivityEvent[]): ActivityEvent[] => {
 };
 
 export const activityService = {
-  async list(projectId: string, query: ActivityQuery = { page: 1, pageSize: 20 }): Promise<ActivityEvent[]> {
-    if (useMockProjectData) {
+  async list(
+    projectId: string,
+    query: ActivityQuery = DEFAULT_ACTIVITY_QUERY,
+  ): Promise<ActivityEvent[]> {
+    if (shouldUseMockProjectData) {
       await wait(180);
-      const page = query.page ?? 1;
-      const pageSize = query.pageSize ?? 20;
+      const page = query.page ?? DEFAULT_ACTIVITY_QUERY.page;
+      const pageSize = query.pageSize ?? DEFAULT_ACTIVITY_QUERY.pageSize;
       const start = (page - 1) * pageSize;
       return sortActivityNewestFirst(mockActivityByProjectId[projectId] ?? []).slice(
         start,
@@ -75,11 +84,7 @@ export const activityService = {
     try {
       return await projectsApi.activity(projectId, query);
     } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(getApiErrorMessage(error, 'Unable to load activity.'));
-      }
-
-      throw error instanceof Error ? error : new Error('Unable to load activity.');
+      throw toProjectServiceError(error, 'Unable to load activity.');
     }
   },
 };

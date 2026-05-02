@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router-dom';
 import { EmptyState, Skeleton } from '@/components/ui';
 import { PageContainer } from '@/components/layout/PageContainer';
+import { APP_ROUTES } from '@/constants/app-constants';
 import { ProjectDetailShell } from '@/features/projects/components/ProjectDetailShell';
 import { useProject } from '@/features/projects/useProject';
 
@@ -15,7 +16,7 @@ export function ProjectDetailPage() {
         title="Loading project"
         description="Fetching the requested project route."
         actions={
-          <Link to="/projects" className="control-button control-button--ghost">
+          <Link to={APP_ROUTES.projects} className="control-button control-button--ghost">
             Back to Projects
           </Link>
         }
@@ -59,7 +60,7 @@ export function ProjectDetailPage() {
         title="Project unavailable"
         description="The protected detail route could not load."
         actions={
-          <Link to="/projects" className="control-button control-button--ghost">
+          <Link to={APP_ROUTES.projects} className="control-button control-button--ghost">
             Back to Projects
           </Link>
         }
@@ -80,7 +81,7 @@ export function ProjectDetailPage() {
         title="Project not found"
         description="The requested project route does not map to an available workspace."
         actions={
-          <Link to="/projects" className="control-button control-button--ghost">
+          <Link to={APP_ROUTES.projects} className="control-button control-button--ghost">
             Back to Projects
           </Link>
         }

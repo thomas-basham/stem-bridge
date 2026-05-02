@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { ProjectSummary } from '@shared/types';
 import { Badge, Button } from '@/components/ui';
+import { APP_ROUTES } from '@/constants/app-constants';
 import { renderProjectValue } from './project-detail-format';
 
 interface ProjectDetailHeaderProps {
@@ -32,11 +33,11 @@ export function ProjectDetailHeader({ project, onOpenUpload }: ProjectDetailHead
       </dl>
 
       <div className="project-detail-header__actions">
-        <Badge tone="violet">/projects/:projectId</Badge>
+        <Badge tone="violet">{APP_ROUTES.projectDetailPattern}</Badge>
         <Button type="button" onClick={onOpenUpload}>
           Upload Version
         </Button>
-        <Link to="/projects" className="control-button control-button--ghost">
+        <Link to={APP_ROUTES.projects} className="control-button control-button--ghost">
           Back to Projects
         </Link>
       </div>

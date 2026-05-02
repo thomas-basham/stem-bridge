@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import { APP_ROUTES } from '@/constants/app-constants';
 
 export function AuthLayout() {
   return (
@@ -30,7 +31,7 @@ export function AuthLayout() {
 
         <div className="auth-layout__tabs" aria-label="Authentication">
           <NavLink
-            to="/login"
+            to={APP_ROUTES.login}
             className={({ isActive }) =>
               isActive ? 'auth-layout__tab auth-layout__tab--active' : 'auth-layout__tab'
             }
@@ -38,7 +39,7 @@ export function AuthLayout() {
             Login
           </NavLink>
           <NavLink
-            to="/register"
+            to={APP_ROUTES.register}
             className={({ isActive }) =>
               isActive ? 'auth-layout__tab auth-layout__tab--active' : 'auth-layout__tab'
             }

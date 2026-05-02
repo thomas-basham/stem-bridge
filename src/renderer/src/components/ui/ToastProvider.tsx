@@ -1,6 +1,8 @@
 import {
   useCallback,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -18,8 +20,16 @@ const createToastId = (): string => {
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const timeoutIdsRef = useRef<Map<string, number>>(new Map());
 
   const dismiss = useCallback((toastId: string): void => {
+    const timeoutId = timeoutIdsRef.current.get(toastId);
+
+    if (timeoutId !== undefined) {
+      window.clearTimeout(timeoutId);
+      timeoutIdsRef.current.delete(toastId);
+    }
+
     setToasts((currentToasts) => currentToasts.filter((toast) => toast.id !== toastId));
   }, []);
 
@@ -33,10 +43,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       };
 
       setToasts((currentToasts) => [nextToast, ...currentToasts].slice(0, 4));
-      window.setTimeout(() => dismiss(nextToast.id), toastDurationMs);
+      const timeoutId = window.setTimeout(() => dismiss(nextToast.id), toastDurationMs);
+      timeoutIdsRef.current.set(nextToast.id, timeoutId);
     },
     [dismiss],
   );
+
+  useEffect(() => {
+    const timeoutIds = timeoutIdsRef.current;
+
+    return () => {
+      timeoutIds.forEach((timeoutId) => window.clearTimeout(timeoutId));
+      timeoutIds.clear();
+    };
+  }, []);
 
   const value = useMemo<ToastContextValue>(
     () => ({

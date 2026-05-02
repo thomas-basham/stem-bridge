@@ -1,7 +1,7 @@
-import axios from 'axios';
-import { commentsApi, getApiErrorMessage } from '@/lib/api';
+import { commentsApi } from '@/lib/api';
 import type { VersionComment } from '@/types/api';
-import { mockVersionsByProjectId, useMockProjectData, wait } from './mockProjectData';
+import { mockVersionsByProjectId, shouldUseMockProjectData, wait } from './mockProjectData';
+import { toProjectServiceError } from './project-service-error';
 
 const getMockCommentsForVersion = (versionId: string): VersionComment[] | null => {
   for (const versions of Object.values(mockVersionsByProjectId)) {
@@ -18,7 +18,7 @@ const getMockCommentsForVersion = (versionId: string): VersionComment[] | null =
 
 export const commentsService = {
   async list(versionId: string): Promise<VersionComment[]> {
-    if (useMockProjectData) {
+    if (shouldUseMockProjectData) {
       await wait(180);
       return [...(getMockCommentsForVersion(versionId) ?? [])].sort((left, right) => {
         return left.timestampSeconds - right.timestampSeconds;
@@ -28,11 +28,7 @@ export const commentsService = {
     try {
       return await commentsApi.list(versionId);
     } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(getApiErrorMessage(error, 'Unable to load comments.'));
-      }
-
-      throw error instanceof Error ? error : new Error('Unable to load comments.');
+      throw toProjectServiceError(error, 'Unable to load comments.');
     }
   },
 
@@ -40,7 +36,7 @@ export const commentsService = {
     versionId: string,
     payload: { text: string; timestampSeconds: number },
   ): Promise<VersionComment> {
-    if (useMockProjectData) {
+    if (shouldUseMockProjectData) {
       await wait(160);
       const comments = getMockCommentsForVersion(versionId);
 
@@ -69,16 +65,12 @@ export const commentsService = {
     try {
       return await commentsApi.create(versionId, payload);
     } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(getApiErrorMessage(error, 'Unable to create comment.'));
-      }
-
-      throw error instanceof Error ? error : new Error('Unable to create comment.');
+      throw toProjectServiceError(error, 'Unable to create comment.');
     }
   },
 
   async remove(commentId: string): Promise<void> {
-    if (useMockProjectData) {
+    if (shouldUseMockProjectData) {
       await wait(120);
 
       for (const versions of Object.values(mockVersionsByProjectId)) {
@@ -99,11 +91,7 @@ export const commentsService = {
     try {
       await commentsApi.remove(commentId);
     } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(getApiErrorMessage(error, 'Unable to delete comment.'));
-      }
-
-      throw error instanceof Error ? error : new Error('Unable to delete comment.');
+      throw toProjectServiceError(error, 'Unable to delete comment.');
     }
   },
 };

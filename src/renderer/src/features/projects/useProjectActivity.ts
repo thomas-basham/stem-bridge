@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { DEFAULT_ACTIVITY_QUERY } from '@/constants/app-constants';
 import { activityService } from '@/features/projects/activityService';
 import type { ActivityEvent } from '@/types/api';
 
@@ -25,8 +26,8 @@ type UseProjectActivityResult = ProjectActivityState & {
 
 export function useProjectActivity(
   projectId: string,
-  page = 1,
-  pageSize = 20,
+  page = DEFAULT_ACTIVITY_QUERY.page,
+  pageSize = DEFAULT_ACTIVITY_QUERY.pageSize,
 ): UseProjectActivityResult {
   const [state, setState] = useState<ProjectActivityState>({
     status: 'loading',
@@ -45,11 +46,11 @@ export function useProjectActivity(
       const events = await activityService.list(projectId, { page, pageSize });
       setState({ status: 'success', data: events, errorMessage: null });
     } catch (error) {
-      setState({
+      setState((currentState) => ({
         status: 'error',
-        data: [],
+        data: currentState.data,
         errorMessage: error instanceof Error ? error.message : 'Unable to load activity.',
-      });
+      }));
     }
   }, [page, pageSize, projectId]);
 

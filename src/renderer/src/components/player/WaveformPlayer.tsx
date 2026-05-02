@@ -2,6 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import WaveSurfer from 'wavesurfer.js';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { FILE_TYPE_LABELS, PRIMARY_MIX_FILE_TYPE } from '@/constants/app-constants';
 import { versionsService } from '@/features/projects/versionsService';
 import { formatPlaybackTime } from '@/lib/time';
 import type { VersionFileAsset } from '@/types/api';
@@ -11,6 +12,8 @@ interface WaveformPlayerProps {
   mixFile?: VersionFileAsset;
   onTimeChange?: (timeSeconds: number) => void;
 }
+
+type WaveformStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 export interface WaveformPlayerHandle {
   seekTo: (timeSeconds: number) => void;
@@ -22,7 +25,7 @@ export const WaveformPlayer = forwardRef<WaveformPlayerHandle, WaveformPlayerPro
     const containerRef = useRef<HTMLDivElement | null>(null);
     const wavesurferRef = useRef<WaveSurfer | null>(null);
     const objectUrlRef = useRef<string | null>(null);
-    const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+    const [status, setStatus] = useState<WaveformStatus>('idle');
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
@@ -52,10 +55,10 @@ export const WaveformPlayer = forwardRef<WaveformPlayerHandle, WaveformPlayerPro
     );
 
     useEffect(() => {
-      let isCancelled = false;
+      let isActive = true;
       const container = containerRef.current;
 
-      const resetPlayer = (): void => {
+      const destroyWaveform = (): void => {
         wavesurferRef.current?.destroy();
         wavesurferRef.current = null;
 
@@ -63,14 +66,17 @@ export const WaveformPlayer = forwardRef<WaveformPlayerHandle, WaveformPlayerPro
           window.URL.revokeObjectURL(objectUrlRef.current);
           objectUrlRef.current = null;
         }
+      };
 
+      const resetPlaybackState = (): void => {
         setIsPlaying(false);
         setCurrentTime(0);
         setDuration(0);
         onTimeChange?.(0);
       };
 
-      resetPlayer();
+      destroyWaveform();
+      resetPlaybackState();
 
       if (!mixFile || !container) {
         setStatus('idle');
@@ -85,7 +91,7 @@ export const WaveformPlayer = forwardRef<WaveformPlayerHandle, WaveformPlayerPro
         try {
           const download = await versionsService.downloadFile({ versionId, fileAsset: mixFile });
 
-          if (isCancelled) {
+          if (!isActive) {
             return;
           }
 
@@ -107,32 +113,60 @@ export const WaveformPlayer = forwardRef<WaveformPlayerHandle, WaveformPlayerPro
           wavesurferRef.current = wavesurfer;
 
           wavesurfer.on('ready', (readyDuration) => {
+            if (!isActive) {
+              return;
+            }
+
             setDuration(readyDuration || wavesurfer.getDuration());
             setStatus('ready');
           });
-          wavesurfer.on('play', () => setIsPlaying(true));
-          wavesurfer.on('pause', () => setIsPlaying(false));
+          wavesurfer.on('play', () => {
+            if (isActive) {
+              setIsPlaying(true);
+            }
+          });
+          wavesurfer.on('pause', () => {
+            if (isActive) {
+              setIsPlaying(false);
+            }
+          });
           wavesurfer.on('finish', () => {
+            if (!isActive) {
+              return;
+            }
+
             setIsPlaying(false);
             setCurrentTime(0);
             onTimeChange?.(0);
           });
           wavesurfer.on('timeupdate', (time) => {
+            if (!isActive) {
+              return;
+            }
+
             setCurrentTime(time);
             onTimeChange?.(time);
           });
           wavesurfer.on('seeking', (time) => {
+            if (!isActive) {
+              return;
+            }
+
             setCurrentTime(time);
             onTimeChange?.(time);
           });
           wavesurfer.on('error', (error) => {
+            if (!isActive) {
+              return;
+            }
+
             setStatus('error');
             setErrorMessage(error instanceof Error ? error.message : 'Unable to load waveform.');
           });
 
           await wavesurfer.load(objectUrl);
         } catch (error) {
-          if (!isCancelled) {
+          if (isActive) {
             setStatus('error');
             setErrorMessage(error instanceof Error ? error.message : 'Unable to load waveform.');
           }
@@ -142,8 +176,8 @@ export const WaveformPlayer = forwardRef<WaveformPlayerHandle, WaveformPlayerPro
       void initializeWaveform();
 
       return () => {
-        isCancelled = true;
-        resetPlayer();
+        isActive = false;
+        destroyWaveform();
       };
     }, [mixFile, onTimeChange, versionId]);
 
@@ -156,7 +190,7 @@ export const WaveformPlayer = forwardRef<WaveformPlayerHandle, WaveformPlayerPro
         <div className="waveform-player waveform-player--empty">
           <EmptyState
             title="No mix file"
-            description="Upload a MIX file to this version to render a waveform preview."
+            description={`Upload a ${FILE_TYPE_LABELS[PRIMARY_MIX_FILE_TYPE]} file to this version to render a waveform preview.`}
           />
         </div>
       );

@@ -1,15 +1,16 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button, Input, useToast } from '@/components/ui';
+import { APP_ROUTES } from '@/constants/app-constants';
 import { useAuth } from '@/features/auth/auth-context';
 
 const resolveRedirectPath = (state: unknown): string => {
   if (typeof state !== 'object' || state === null) {
-    return '/projects';
+    return APP_ROUTES.projects;
   }
 
   const fromPath = (state as { from?: { pathname?: string } }).from?.pathname;
-  return fromPath || '/projects';
+  return fromPath || APP_ROUTES.projects;
 };
 
 export function LoginPage() {
@@ -97,7 +98,7 @@ export function LoginPage() {
 
       <div className="auth-card__footer">
         <span>Need an account?</span>
-        <Link to="/register">Create one</Link>
+        <Link to={APP_ROUTES.register}>Create one</Link>
       </div>
     </div>
   );

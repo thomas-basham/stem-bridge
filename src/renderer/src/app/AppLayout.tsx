@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { Badge, Button, useToast } from '@/components/ui';
+import { APP_ROUTES } from '@/constants/app-constants';
 import { useAuth } from '@/features/auth/auth-context';
 import { useDesktopMetadata } from '@/hooks/useDesktopMetadata';
 
@@ -25,7 +26,7 @@ export function AppLayout() {
   const handleLogout = (): void => {
     logout();
     toast.success('Signed out');
-    navigate('/login', { replace: true });
+    navigate(APP_ROUTES.login, { replace: true });
   };
 
   const runtimeLabel =
@@ -44,7 +45,7 @@ export function AppLayout() {
 
         <nav className="desktop-nav" aria-label="Workspace">
           <NavLink
-            to="/projects"
+            to={APP_ROUTES.projects}
             className={({ isActive }) =>
               isActive ? 'desktop-nav__link desktop-nav__link--active' : 'desktop-nav__link'
             }

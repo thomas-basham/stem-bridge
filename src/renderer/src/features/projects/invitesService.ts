@@ -1,7 +1,7 @@
-import axios from 'axios';
-import { getApiErrorMessage, invitesApi } from '@/lib/api';
+import { invitesApi } from '@/lib/api';
 import type { Invite } from '@/types/api';
-import { useMockProjectData, wait } from './mockProjectData';
+import { shouldUseMockProjectData, wait } from './mockProjectData';
+import { toProjectServiceError } from './project-service-error';
 
 const mockInvitedBy = {
   id: 'mock-current-user',
@@ -48,7 +48,7 @@ const sortInvites = (invites: Invite[]): Invite[] => {
 
 export const invitesService = {
   async list(projectId: string): Promise<Invite[]> {
-    if (useMockProjectData) {
+    if (shouldUseMockProjectData) {
       await wait(180);
       return sortInvites(mockInvitesByProjectId[projectId] ?? []);
     }
@@ -56,16 +56,12 @@ export const invitesService = {
     try {
       return await invitesApi.list(projectId);
     } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(getApiErrorMessage(error, 'Unable to load invites.'));
-      }
-
-      throw error instanceof Error ? error : new Error('Unable to load invites.');
+      throw toProjectServiceError(error, 'Unable to load invites.');
     }
   },
 
   async create(projectId: string, payload: { email: string }): Promise<Invite> {
-    if (useMockProjectData) {
+    if (shouldUseMockProjectData) {
       await wait(220);
       const email = payload.email.trim().toLowerCase();
       const invites = (mockInvitesByProjectId[projectId] ??= []);
@@ -85,11 +81,7 @@ export const invitesService = {
     try {
       return await invitesApi.create(projectId, payload);
     } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(getApiErrorMessage(error, 'Unable to send invite.'));
-      }
-
-      throw error instanceof Error ? error : new Error('Unable to send invite.');
+      throw toProjectServiceError(error, 'Unable to send invite.');
     }
   },
 };

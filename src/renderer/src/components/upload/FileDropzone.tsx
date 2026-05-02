@@ -1,5 +1,6 @@
 import { useRef, useState, type DragEvent } from 'react';
 import { Button } from '@/components/ui';
+import { FILE_TYPE_LABELS } from '@/constants/app-constants';
 
 interface FileDropzoneProps {
   disabled?: boolean;
@@ -9,6 +10,13 @@ interface FileDropzoneProps {
 const getFilesFromList = (fileList: FileList | null): File[] => {
   return fileList ? Array.from(fileList) : [];
 };
+
+const supportedUploadTypesDescription = [
+  `${FILE_TYPE_LABELS.STEM.toLowerCase()}s`,
+  `${FILE_TYPE_LABELS.MIX.toLowerCase()}es`,
+  FILE_TYPE_LABELS.MIDI,
+  `${FILE_TYPE_LABELS.SAMPLE.toLowerCase()}s`,
+].join(', ');
 
 export function FileDropzone({ disabled = false, onFilesAdded }: FileDropzoneProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -57,7 +65,7 @@ export function FileDropzone({ disabled = false, onFilesAdded }: FileDropzonePro
       />
       <div className="file-dropzone__copy">
         <strong>Drop files here</strong>
-        <span>Upload stems, mixes, MIDI, samples, and other session assets.</span>
+        <span>Upload {supportedUploadTypesDescription}, and other session assets.</span>
       </div>
       <Button
         type="button"

@@ -1,5 +1,7 @@
 import axios, { type AxiosError, type AxiosRequestConfig } from 'axios';
-import { clearAuthSession, getAuthToken, setAuthSession } from '@/lib/auth-storage';
+import { API_ENDPOINTS, APP_EVENTS, DEFAULT_ACTIVITY_QUERY } from '@/constants/app-constants';
+import { appConfig } from '@/config/app-config';
+import { clearAuthSession, getAuthToken } from '@/lib/auth-storage';
 import type {
   ActivityEvent,
   ApiResponse,
@@ -16,12 +18,10 @@ import type {
   VersionFileAssetType,
 } from '@/types/api';
 
-const baseURL = import.meta.env.VITE_API_BASE_URL?.trim() || 'http://localhost:4000';
-
-export const unauthorizedEventName = 'stembridge:unauthorized';
+export const unauthorizedEventName = APP_EVENTS.unauthorized;
 
 export const apiClient = axios.create({
-  baseURL,
+  baseURL: appConfig.apiBaseUrl,
   timeout: 10000,
   headers: {
     Accept: 'application/json',
@@ -193,43 +193,44 @@ export const authApi = {
   async login(payload: LoginPayload): Promise<AuthResponse> {
     const authResponse = await apiRequest<AuthResponse>({
       method: 'POST',
-      url: '/auth/login',
+      url: API_ENDPOINTS.auth.login,
       data: payload,
     });
-    setAuthSession(authResponse);
     return authResponse;
   },
 
   async register(payload: RegisterPayload): Promise<AuthResponse> {
     const authResponse = await apiRequest<AuthResponse>({
       method: 'POST',
-      url: '/auth/register',
+      url: API_ENDPOINTS.auth.register,
       data: payload,
     });
-    setAuthSession(authResponse);
     return authResponse;
   },
 
   async me(): Promise<User> {
-    const response = await apiRequest<CurrentUserResponse>({ method: 'GET', url: '/auth/me' });
+    const response = await apiRequest<CurrentUserResponse>({
+      method: 'GET',
+      url: API_ENDPOINTS.auth.me,
+    });
     return response.user;
   },
 
-  logout(): void {
-    clearAuthSession();
-  },
 };
 
 export const projectsApi = {
   async list(): Promise<Project[]> {
-    const response = await apiRequest<ProjectsResponse>({ method: 'GET', url: '/projects' });
+    const response = await apiRequest<ProjectsResponse>({
+      method: 'GET',
+      url: API_ENDPOINTS.projects.list,
+    });
     return response.projects;
   },
 
   async getById(projectId: string): Promise<Project> {
     const response = await apiRequest<ProjectResponse>({
       method: 'GET',
-      url: `/projects/${projectId}`,
+      url: API_ENDPOINTS.projects.detail(projectId),
     });
     return response.project;
   },
@@ -237,22 +238,29 @@ export const projectsApi = {
   async create(payload: ProjectPayload): Promise<Project> {
     const response = await apiRequest<ProjectResponse>({
       method: 'POST',
-      url: '/projects',
+      url: API_ENDPOINTS.projects.list,
       data: payload,
     });
     return response.project;
   },
 
   update: (projectId: string, payload: Partial<ProjectPayload>): Promise<Project> =>
-    apiRequest<Project>({ method: 'PATCH', url: `/projects/${projectId}`, data: payload }),
+    apiRequest<Project>({
+      method: 'PATCH',
+      url: API_ENDPOINTS.projects.detail(projectId),
+      data: payload,
+    }),
 
   members: (projectId: string): Promise<ProjectMember[]> =>
-    apiRequest<ProjectMember[]>({ method: 'GET', url: `/projects/${projectId}/members` }),
+    apiRequest<ProjectMember[]>({
+      method: 'GET',
+      url: API_ENDPOINTS.projects.members(projectId),
+    }),
 
   async versions(projectId: string): Promise<SongVersion[]> {
     const response = await apiRequest<VersionsResponse>({
       method: 'GET',
-      url: `/projects/${projectId}/versions`,
+      url: API_ENDPOINTS.projects.versions(projectId),
     });
     return response.versions;
   },
@@ -260,25 +268,31 @@ export const projectsApi = {
   async createVersion(projectId: string, payload: CreateVersionPayload): Promise<SongVersion> {
     const response = await apiRequest<VersionResponse>({
       method: 'POST',
-      url: `/projects/${projectId}/versions`,
+      url: API_ENDPOINTS.projects.versions(projectId),
       data: payload,
     });
     return response.version;
   },
 
   files: (projectId: string): Promise<FileAsset[]> =>
-    apiRequest<FileAsset[]>({ method: 'GET', url: `/projects/${projectId}/files` }),
+    apiRequest<FileAsset[]>({
+      method: 'GET',
+      url: API_ENDPOINTS.projects.files(projectId),
+    }),
 
   comments: (projectId: string): Promise<Comment[]> =>
-    apiRequest<Comment[]>({ method: 'GET', url: `/projects/${projectId}/comments` }),
+    apiRequest<Comment[]>({
+      method: 'GET',
+      url: API_ENDPOINTS.projects.comments(projectId),
+    }),
 
   async activity(projectId: string, query: ActivityQuery = {}): Promise<ActivityEvent[]> {
     const response = await apiRequest<ActivityResponse>({
       method: 'GET',
-      url: `/projects/${projectId}/activity`,
+      url: API_ENDPOINTS.projects.activity(projectId),
       params: {
-        page: query.page ?? 1,
-        pageSize: query.pageSize ?? 20,
+        page: query.page ?? DEFAULT_ACTIVITY_QUERY.page,
+        pageSize: query.pageSize ?? DEFAULT_ACTIVITY_QUERY.pageSize,
       },
     });
     return response.events;
@@ -287,7 +301,7 @@ export const projectsApi = {
   async invites(projectId: string): Promise<Invite[]> {
     const response = await apiRequest<InvitesResponse>({
       method: 'GET',
-      url: `/projects/${projectId}/invites`,
+      url: API_ENDPOINTS.projects.invites(projectId),
     });
     return response.invites;
   },
@@ -297,7 +311,7 @@ export const versionsApi = {
   async getById(versionId: string): Promise<SongVersion> {
     const response = await apiRequest<VersionResponse>({
       method: 'GET',
-      url: `/versions/${versionId}`,
+      url: API_ENDPOINTS.versions.detail(versionId),
     });
     return response.version;
   },
@@ -316,7 +330,7 @@ export const versionsApi = {
 
     const response = await apiRequest<FileUploadResponse>({
       method: 'POST',
-      url: `/versions/${versionId}/files/upload`,
+      url: API_ENDPOINTS.versions.fileUpload(versionId),
       data: formData,
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -336,7 +350,7 @@ export const versionsApi = {
   async downloadFile(versionId: string, fileId: string): Promise<FileDownloadResponse> {
     const response = await apiClient.request<Blob>({
       method: 'GET',
-      url: `/versions/${versionId}/files/${fileId}/download`,
+      url: API_ENDPOINTS.versions.fileDownload(versionId, fileId),
       responseType: 'blob',
     });
 
@@ -349,7 +363,7 @@ export const versionsApi = {
   async downloadVersionZip(versionId: string): Promise<FileDownloadResponse> {
     const response = await apiClient.request<Blob>({
       method: 'GET',
-      url: `/versions/${versionId}/download`,
+      url: API_ENDPOINTS.versions.downloadZip(versionId),
       responseType: 'blob',
     });
 
@@ -383,7 +397,7 @@ export const commentsApi = {
   async list(versionId: string): Promise<VersionComment[]> {
     const response = await apiRequest<CommentsResponse>({
       method: 'GET',
-      url: `/versions/${versionId}/comments`,
+      url: API_ENDPOINTS.versions.comments(versionId),
     });
     return response.comments;
   },
@@ -391,21 +405,24 @@ export const commentsApi = {
   async create(versionId: string, payload: CommentPayload): Promise<VersionComment> {
     const response = await apiRequest<CommentResponse>({
       method: 'POST',
-      url: `/versions/${versionId}/comments`,
+      url: API_ENDPOINTS.versions.comments(versionId),
       data: payload,
     });
     return response.comment;
   },
 
   remove: (commentId: string): Promise<DeleteCommentResponse> =>
-    apiRequest<DeleteCommentResponse>({ method: 'DELETE', url: `/comments/${commentId}` }),
+    apiRequest<DeleteCommentResponse>({
+      method: 'DELETE',
+      url: API_ENDPOINTS.comments.detail(commentId),
+    }),
 };
 
 export const invitesApi = {
   async list(projectId: string): Promise<Invite[]> {
     const response = await apiRequest<InvitesResponse>({
       method: 'GET',
-      url: `/projects/${projectId}/invites`,
+      url: API_ENDPOINTS.projects.invites(projectId),
     });
     return response.invites;
   },
@@ -413,12 +430,16 @@ export const invitesApi = {
   async create(projectId: string, payload: InvitePayload): Promise<Invite> {
     const response = await apiRequest<InviteResponse>({
       method: 'POST',
-      url: `/projects/${projectId}/invites`,
+      url: API_ENDPOINTS.projects.invites(projectId),
       data: payload,
     });
     return response.invite;
   },
 
   revoke: (inviteId: string): Promise<Invite> =>
-    apiRequest<Invite>({ method: 'PATCH', url: `/invites/${inviteId}`, data: { status: 'revoked' } }),
+    apiRequest<Invite>({
+      method: 'PATCH',
+      url: API_ENDPOINTS.invites.detail(inviteId),
+      data: { status: 'revoked' },
+    }),
 };

@@ -1,16 +1,11 @@
-import axios from 'axios';
-import {
-  getApiErrorMessage,
-  getBlobApiErrorMessage,
-  projectsApi,
-  versionsApi,
-} from '@/lib/api';
+import { projectsApi, versionsApi } from '@/lib/api';
 import type {
   SongVersion,
   VersionFileAsset,
   VersionFileAssetType,
 } from '@/types/api';
-import { mockVersionsByProjectId, useMockProjectData, wait } from './mockProjectData';
+import { mockVersionsByProjectId, shouldUseMockProjectData, wait } from './mockProjectData';
+import { toProjectBlobServiceError, toProjectServiceError } from './project-service-error';
 
 const getMockVersionById = (versionId: string): SongVersion | null => {
   for (const versions of Object.values(mockVersionsByProjectId)) {
@@ -26,7 +21,7 @@ const getMockVersionById = (versionId: string): SongVersion | null => {
 
 export const versionsService = {
   async list(projectId: string): Promise<SongVersion[]> {
-    if (useMockProjectData) {
+    if (shouldUseMockProjectData) {
       await wait(220);
       return mockVersionsByProjectId[projectId] ?? [];
     }
@@ -34,16 +29,12 @@ export const versionsService = {
     try {
       return await projectsApi.versions(projectId);
     } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(getApiErrorMessage(error, 'Unable to load versions.'));
-      }
-
-      throw error instanceof Error ? error : new Error('Unable to load versions.');
+      throw toProjectServiceError(error, 'Unable to load versions.');
     }
   },
 
   async getById(versionId: string): Promise<SongVersion> {
-    if (useMockProjectData) {
+    if (shouldUseMockProjectData) {
       await wait(180);
       const version = getMockVersionById(versionId);
 
@@ -57,16 +48,12 @@ export const versionsService = {
     try {
       return await versionsApi.getById(versionId);
     } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(getApiErrorMessage(error, 'Unable to load version.'));
-      }
-
-      throw error instanceof Error ? error : new Error('Unable to load version.');
+      throw toProjectServiceError(error, 'Unable to load version.');
     }
   },
 
   async create(projectId: string, payload: { notes?: string }): Promise<SongVersion> {
-    if (useMockProjectData) {
+    if (shouldUseMockProjectData) {
       await wait(180);
 
       const versions = mockVersionsByProjectId[projectId] ?? [];
@@ -94,11 +81,7 @@ export const versionsService = {
     try {
       return await projectsApi.createVersion(projectId, payload);
     } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(getApiErrorMessage(error, 'Unable to create version.'));
-      }
-
-      throw error instanceof Error ? error : new Error('Unable to create version.');
+      throw toProjectServiceError(error, 'Unable to create version.');
     }
   },
 
@@ -108,7 +91,7 @@ export const versionsService = {
     type: VersionFileAssetType;
     onProgress?: (progress: number) => void;
   }): Promise<VersionFileAsset> {
-    if (useMockProjectData) {
+    if (shouldUseMockProjectData) {
       for (const progress of [20, 48, 76, 100]) {
         await wait(80);
         params.onProgress?.(progress);
@@ -147,11 +130,7 @@ export const versionsService = {
         onProgress: params.onProgress,
       });
     } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(getApiErrorMessage(error, `Unable to upload ${params.file.name}.`));
-      }
-
-      throw error instanceof Error ? error : new Error(`Unable to upload ${params.file.name}.`);
+      throw toProjectServiceError(error, `Unable to upload ${params.file.name}.`);
     }
   },
 
@@ -159,7 +138,7 @@ export const versionsService = {
     versionId: string;
     fileAsset: VersionFileAsset;
   }): Promise<{ blob: Blob; fileName: string }> {
-    if (useMockProjectData) {
+    if (shouldUseMockProjectData) {
       await wait(120);
       return {
         blob: new Blob([`Mock download for ${params.fileAsset.originalName}`], {
@@ -177,18 +156,12 @@ export const versionsService = {
         fileName: result.fileName || params.fileAsset.originalName || params.fileAsset.name,
       };
     } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(getApiErrorMessage(error, `Unable to download ${params.fileAsset.name}.`));
-      }
-
-      throw error instanceof Error
-        ? error
-        : new Error(`Unable to download ${params.fileAsset.name}.`);
+      throw toProjectServiceError(error, `Unable to download ${params.fileAsset.name}.`);
     }
   },
 
   async downloadVersionZip(versionId: string): Promise<{ blob: Blob; fileName: string }> {
-    if (useMockProjectData) {
+    if (shouldUseMockProjectData) {
       await wait(160);
       const version = getMockVersionById(versionId);
 
@@ -207,11 +180,7 @@ export const versionsService = {
     try {
       return await versionsApi.downloadVersionZip(versionId);
     } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(await getBlobApiErrorMessage(error, 'Unable to download version ZIP.'));
-      }
-
-      throw error instanceof Error ? error : new Error('Unable to download version ZIP.');
+      throw await toProjectBlobServiceError(error, 'Unable to download version ZIP.');
     }
   },
 };

@@ -1,3 +1,4 @@
+import { FILE_TYPE_LABELS } from '@/constants/app-constants';
 import type { VersionFileAsset, VersionFileAssetType } from '@/types/api';
 import { FileAssetRow } from './FileAssetRow';
 
@@ -21,7 +22,7 @@ export function FileGroupSection({
   return (
     <section className="file-group-section">
       <header className="file-group-section__header">
-        <h5>{type}</h5>
+        <h5>{FILE_TYPE_LABELS[type]}</h5>
         <span>
           {files.length} file{files.length === 1 ? '' : 's'}
         </span>

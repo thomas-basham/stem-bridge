@@ -42,11 +42,11 @@ export function useProjectInvites(projectId: string): UseProjectInvitesResult {
       const invites = await invitesService.list(projectId);
       setState({ status: 'success', data: invites, errorMessage: null });
     } catch (error) {
-      setState({
+      setState((currentState) => ({
         status: 'error',
-        data: [],
+        data: currentState.data,
         errorMessage: error instanceof Error ? error.message : 'Unable to load invites.',
-      });
+      }));
     }
   }, [projectId]);
 

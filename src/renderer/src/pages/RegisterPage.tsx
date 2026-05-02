@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, Input, useToast } from '@/components/ui';
+import { APP_ROUTES } from '@/constants/app-constants';
 import { useAuth } from '@/features/auth/auth-context';
 
 export function RegisterPage() {
@@ -22,7 +23,7 @@ export function RegisterPage() {
     try {
       await register({ name, email, password });
       toast.success('Account created', 'Your StemBridge workspace is ready.');
-      navigate('/projects', { replace: true });
+      navigate(APP_ROUTES.projects, { replace: true });
     } catch (submitError) {
       const message = submitError instanceof Error ? submitError.message : 'Unable to create account.';
       toast.error('Registration failed', message);
@@ -100,7 +101,7 @@ export function RegisterPage() {
 
       <div className="auth-card__footer">
         <span>Already have access?</span>
-        <Link to="/login">Sign in</Link>
+        <Link to={APP_ROUTES.login}>Sign in</Link>
       </div>
     </div>
   );

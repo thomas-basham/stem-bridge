@@ -3,6 +3,7 @@ import { AppLayout } from '@/app/AppLayout';
 import { AuthLayout } from '@/app/AuthLayout';
 import { ProtectedRoute } from '@/components/routing/ProtectedRoute';
 import { PublicRoute } from '@/components/routing/PublicRoute';
+import { APP_ROUTES } from '@/constants/app-constants';
 import { LoginPage } from '@/pages/LoginPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { ProjectDetailPage } from '@/pages/ProjectDetailPage';
@@ -11,8 +12,8 @@ import { RegisterPage } from '@/pages/RegisterPage';
 
 export const router = createHashRouter([
   {
-    path: '/',
-    element: <Navigate to="/projects" replace />,
+    path: APP_ROUTES.root,
+    element: <Navigate to={APP_ROUTES.projects} replace />,
   },
   {
     element: <PublicRoute />,
@@ -21,11 +22,11 @@ export const router = createHashRouter([
         element: <AuthLayout />,
         children: [
           {
-            path: '/login',
+            path: APP_ROUTES.login,
             element: <LoginPage />,
           },
           {
-            path: '/register',
+            path: APP_ROUTES.register,
             element: <RegisterPage />,
           },
         ],
@@ -39,11 +40,11 @@ export const router = createHashRouter([
         element: <AppLayout />,
         children: [
           {
-            path: '/projects',
+            path: APP_ROUTES.projects,
             element: <ProjectsPage />,
           },
           {
-            path: '/projects/:projectId',
+            path: APP_ROUTES.projectDetailPattern,
             element: <ProjectDetailPage />,
           },
         ],
@@ -51,7 +52,7 @@ export const router = createHashRouter([
     ],
   },
   {
-    path: '*',
+    path: APP_ROUTES.notFound,
     element: <NotFoundPage />,
   },
 ]);

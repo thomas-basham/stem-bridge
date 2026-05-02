@@ -3,6 +3,7 @@ import { Button, Modal, Textarea, useToast } from '@/components/ui';
 import { FileDropzone } from '@/components/upload/FileDropzone';
 import { UploadFileList } from '@/components/upload/UploadFileList';
 import type { PendingUploadFile } from '@/components/upload/uploadTypes';
+import { DEFAULT_UPLOAD_FILE_TYPE } from '@/constants/app-constants';
 import { versionsService } from '@/features/projects/versionsService';
 
 interface UploadVersionModalProps {
@@ -15,7 +16,7 @@ interface UploadVersionModalProps {
 const createUploadFile = (file: File): PendingUploadFile => ({
   id: window.crypto.randomUUID(),
   file,
-  type: 'STEM',
+  type: DEFAULT_UPLOAD_FILE_TYPE,
   progress: 0,
   status: 'pending',
 });

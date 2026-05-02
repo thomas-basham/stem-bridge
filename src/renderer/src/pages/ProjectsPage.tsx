@@ -5,6 +5,7 @@ import { Badge, Button, EmptyState, Input, Modal, Skeleton, useToast } from '@/c
 import { PageContainer } from '@/components/layout/PageContainer';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { StatCard } from '@/components/ui/StatCard';
+import { API_ENDPOINTS, APP_ROUTES } from '@/constants/app-constants';
 import { getApiErrorMessage } from '@/lib/api';
 import { useProjects } from '@/features/projects/useProjects';
 
@@ -84,7 +85,7 @@ function CreateProjectModal({ open, onClose, onCreateProject }: CreateProjectMod
       toast.success('Project created', `${project.name} is ready for versions and files.`);
       resetForm();
       onClose();
-      navigate(`/projects/${project.id}`);
+      navigate(APP_ROUTES.projectDetail(project.id));
     } catch (error) {
       const message = getApiErrorMessage(error, 'Unable to create project.');
       setErrorMessage(message);
@@ -205,7 +206,7 @@ function ProjectGrid({ projects }: { projects: ProjectSummary[] }) {
         const latestVersionNumber = getLatestVersionNumber(project);
 
         return (
-          <Link key={project.id} to={`/projects/${project.id}`} className="project-card">
+          <Link key={project.id} to={APP_ROUTES.projectDetail(project.id)} className="project-card">
             <div className="project-card__header">
               <div>
                 <h4>{project.name}</h4>
@@ -289,7 +290,7 @@ export function ProjectsPage() {
         <SectionCard
           title="Your Projects"
           subtitle="Open a project to manage versions, files, feedback, and collaborators."
-          action={<Badge tone="violet">GET /projects</Badge>}
+          action={<Badge tone="violet">GET {API_ENDPOINTS.projects.list}</Badge>}
         >
           {isLoading ? <ProjectGridSkeleton /> : null}
 

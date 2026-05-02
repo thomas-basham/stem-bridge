@@ -1,7 +1,5 @@
+import { RENDERER_STORAGE_KEYS } from '@/constants/app-constants';
 import type { User } from '@/types/api';
-
-const authTokenKey = 'stembridge.desktop.auth-token';
-const authUserKey = 'stembridge.desktop.auth-user';
 
 const canUseStorage = (): boolean => {
   try {
@@ -29,7 +27,7 @@ export const getAuthToken = (): string | null => {
     return null;
   }
 
-  return window.localStorage.getItem(authTokenKey);
+  return window.localStorage.getItem(RENDERER_STORAGE_KEYS.authToken);
 };
 
 export const setAuthToken = (token: string): void => {
@@ -37,7 +35,7 @@ export const setAuthToken = (token: string): void => {
     return;
   }
 
-  window.localStorage.setItem(authTokenKey, token);
+  window.localStorage.setItem(RENDERER_STORAGE_KEYS.authToken, token);
 };
 
 export const clearAuthToken = (): void => {
@@ -45,17 +43,17 @@ export const clearAuthToken = (): void => {
     return;
   }
 
-  window.localStorage.removeItem(authTokenKey);
+  window.localStorage.removeItem(RENDERER_STORAGE_KEYS.authToken);
 };
 
-export const getStoredUser = (): User | null => readJson<User>(authUserKey);
+export const getStoredUser = (): User | null => readJson<User>(RENDERER_STORAGE_KEYS.authUser);
 
 export const setStoredUser = (user: User): void => {
   if (!canUseStorage()) {
     return;
   }
 
-  window.localStorage.setItem(authUserKey, JSON.stringify(user));
+  window.localStorage.setItem(RENDERER_STORAGE_KEYS.authUser, JSON.stringify(user));
 };
 
 export const clearStoredUser = (): void => {
@@ -63,7 +61,7 @@ export const clearStoredUser = (): void => {
     return;
   }
 
-  window.localStorage.removeItem(authUserKey);
+  window.localStorage.removeItem(RENDERER_STORAGE_KEYS.authUser);
 };
 
 export const setAuthSession = ({ token, user }: { token: string; user: User }): void => {

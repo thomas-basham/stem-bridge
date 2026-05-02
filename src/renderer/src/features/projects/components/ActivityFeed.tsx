@@ -30,7 +30,7 @@ const formatActivityTimestamp = (isoDate: string): string => {
 };
 
 export function ActivityFeed({ projectId }: ActivityFeedProps) {
-  const activityState = useProjectActivity(projectId, 1, 20);
+  const activityState = useProjectActivity(projectId);
   const events = useMemo(() => {
     return sortActivityNewestFirst(activityState.data);
   }, [activityState.data]);

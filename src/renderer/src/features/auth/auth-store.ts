@@ -62,7 +62,7 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
       const message = getApiErrorMessage(error, 'Unable to sign in.');
       clearAuthSession();
       set({ status: 'error', error: message, user: null, token: null, hasInitialized: true });
-      throw error;
+      throw new Error(message);
     }
   },
 
@@ -84,7 +84,7 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
       const message = getApiErrorMessage(error, 'Unable to create your account.');
       clearAuthSession();
       set({ status: 'error', error: message, user: null, token: null, hasInitialized: true });
-      throw error;
+      throw new Error(message);
     }
   },
 
@@ -116,7 +116,7 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
   },
 
   logout() {
-    authApi.logout();
+    clearAuthSession();
     set({ token: null, user: null, status: 'idle', error: null, hasInitialized: true });
   },
 

@@ -1,3 +1,4 @@
+import { ACTIVITY_EVENT_TYPES, ACTIVITY_METADATA_KEYS } from '@/constants/app-constants';
 import { formatPlaybackTime } from '@/lib/time';
 import type { ActivityEvent } from '@/types/api';
 
@@ -42,37 +43,40 @@ export const getActivityEventText = (event: ActivityEvent): string => {
   const { metadata } = event;
 
   switch (event.type) {
-    case 'INVITE_SENT': {
-      const email = getMetadataString(metadata, 'email');
+    case ACTIVITY_EVENT_TYPES.inviteSent: {
+      const email = getMetadataString(metadata, ACTIVITY_METADATA_KEYS.email);
       return email ? `Invite created for ${email}.` : 'Invite created.';
     }
-    case 'INVITE_ACCEPTED': {
-      const email = getMetadataString(metadata, 'email');
+    case ACTIVITY_EVENT_TYPES.inviteAccepted: {
+      const email = getMetadataString(metadata, ACTIVITY_METADATA_KEYS.email);
       return email ? `${email} accepted an invite.` : 'Invite accepted.';
     }
-    case 'VERSION_CREATED': {
-      const versionNumber = getMetadataNumber(metadata, 'versionNumber');
+    case ACTIVITY_EVENT_TYPES.versionCreated: {
+      const versionNumber = getMetadataNumber(metadata, ACTIVITY_METADATA_KEYS.versionNumber);
       return versionNumber ? `Version ${versionNumber} created.` : 'Version created.';
     }
-    case 'FILE_UPLOADED': {
-      const fileName = getMetadataString(metadata, 'name');
-      const fileType = getMetadataString(metadata, 'type');
+    case ACTIVITY_EVENT_TYPES.fileUploaded: {
+      const fileName = getMetadataString(metadata, ACTIVITY_METADATA_KEYS.fileName);
+      const fileType = getMetadataString(metadata, ACTIVITY_METADATA_KEYS.fileType);
       const fileLabel = fileName ?? 'File';
       return fileType ? `${fileLabel} added as ${fileType}.` : `${fileLabel} added.`;
     }
-    case 'COMMENT_ADDED': {
-      const timestampSeconds = getMetadataNumber(metadata, 'timestampSeconds');
+    case ACTIVITY_EVENT_TYPES.commentAdded: {
+      const timestampSeconds = getMetadataNumber(
+        metadata,
+        ACTIVITY_METADATA_KEYS.timestampSeconds,
+      );
       return timestampSeconds === null
         ? 'Comment added.'
         : `Comment added at ${formatPlaybackTime(timestampSeconds)}.`;
     }
-    case 'PROJECT_CREATED':
+    case ACTIVITY_EVENT_TYPES.projectCreated:
       return 'Project created.';
-    case 'PROJECT_UPDATED':
+    case ACTIVITY_EVENT_TYPES.projectUpdated:
       return 'Project updated.';
-    case 'MEMBER_ADDED':
+    case ACTIVITY_EVENT_TYPES.memberAdded:
       return 'Collaborator added.';
-    case 'MEMBER_REMOVED':
+    case ACTIVITY_EVENT_TYPES.memberRemoved:
       return 'Collaborator removed.';
     default:
       return formatEventType(event.type);

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ProjectSummary } from '@shared/types';
 import { Button, EmptyState, LoadingSpinner, useToast } from '@/components/ui';
 import { WaveformPlayer, type WaveformPlayerHandle } from '@/components/player/WaveformPlayer';
+import { PRIMARY_MIX_FILE_TYPE } from '@/constants/app-constants';
 import { useVersionDetails } from '@/features/projects/useVersionDetails';
 import { versionsService } from '@/features/projects/versionsService';
 import { triggerBlobDownload } from '@/lib/file-download';
@@ -22,7 +23,9 @@ export function ProjectWorkspaceMain({ project, selectedVersionId }: ProjectWork
   const [zipDownloadError, setZipDownloadError] = useState<string | null>(null);
   const versionState = useVersionDetails(selectedVersionId);
   const selectedVersion = versionState.status === 'success' ? versionState.data : null;
-  const primaryMixFile = selectedVersion?.fileAssets?.find((fileAsset) => fileAsset.type === 'MIX');
+  const primaryMixFile = selectedVersion?.fileAssets?.find((fileAsset) => {
+    return fileAsset.type === PRIMARY_MIX_FILE_TYPE;
+  });
   const handleWaveformTimeChange = useCallback((timeSeconds: number): void => {
     setCurrentPlaybackTime((previousTime) => {
       if (timeSeconds === 0 || Math.abs(previousTime - timeSeconds) >= 0.25) {
