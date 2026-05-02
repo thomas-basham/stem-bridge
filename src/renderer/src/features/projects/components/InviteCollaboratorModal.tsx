@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Button, Input, Modal } from '@/components/ui';
+import { Button, Input, Modal, useToast } from '@/components/ui';
 
 interface InviteCollaboratorModalProps {
   open: boolean;
@@ -12,6 +12,7 @@ export function InviteCollaboratorModal({
   onClose,
   onInvite,
 }: InviteCollaboratorModalProps) {
+  const toast = useToast();
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -42,11 +43,15 @@ export function InviteCollaboratorModal({
     setErrorMessage(null);
 
     try {
-      await onInvite(email.trim());
+      const invitedEmail = email.trim();
+      await onInvite(invitedEmail);
+      toast.success('Invite sent', `${invitedEmail} can now accept project access.`);
       resetForm();
       onClose();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Unable to send invite.');
+      const message = error instanceof Error ? error.message : 'Unable to send invite.';
+      setErrorMessage(message);
+      toast.error('Invite failed', message);
     } finally {
       setIsSubmitting(false);
     }
@@ -57,14 +62,20 @@ export function InviteCollaboratorModal({
       open={open}
       title="Invite Collaborator"
       description="Send a project invite to a collaborator by email."
+      closeDisabled={isSubmitting}
       onClose={handleClose}
       footer={
         <>
           <Button type="button" variant="ghost" onClick={handleClose} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button type="submit" form="invite-collaborator-form" disabled={isSubmitting}>
-            {isSubmitting ? 'Sending...' : 'Send Invite'}
+          <Button
+            type="submit"
+            form="invite-collaborator-form"
+            isLoading={isSubmitting}
+            loadingLabel="Sending..."
+          >
+            Send Invite
           </Button>
         </>
       }

@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { Button, Modal, Textarea } from '@/components/ui';
+import { Button, Modal, Textarea, useToast } from '@/components/ui';
 import { FileDropzone } from '@/components/upload/FileDropzone';
 import { UploadFileList } from '@/components/upload/UploadFileList';
 import type { PendingUploadFile } from '@/components/upload/uploadTypes';
@@ -26,6 +26,7 @@ export function UploadVersionModal({
   onClose,
   onComplete,
 }: UploadVersionModalProps) {
+  const toast = useToast();
   const [notes, setNotes] = useState('');
   const [files, setFiles] = useState<PendingUploadFile[]>([]);
   const [createdVersionId, setCreatedVersionId] = useState<string | null>(null);
@@ -116,14 +117,19 @@ export function UploadVersionModal({
       await onComplete(versionId);
 
       if (failedUploads > 0) {
-        setSubmitError('One or more files failed to upload. Fix the file list and retry.');
+        const message = 'One or more files failed to upload. Fix the file list and retry.';
+        setSubmitError(message);
+        toast.error('Version upload incomplete', message);
         return;
       }
 
+      toast.success('Version uploaded', 'The new version is selected and ready for review.');
       resetForm();
       onClose();
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Unable to create version.');
+      const message = error instanceof Error ? error.message : 'Unable to create version.';
+      setSubmitError(message);
+      toast.error('Version upload failed', message);
     } finally {
       setIsUploading(false);
     }
@@ -134,6 +140,7 @@ export function UploadVersionModal({
       open={open}
       title="Upload Version"
       description="Create a version, attach files, and make it available in the project timeline."
+      closeDisabled={isUploading}
       onClose={handleClose}
       footer={
         <>
@@ -143,9 +150,11 @@ export function UploadVersionModal({
           <Button
             type="submit"
             form="upload-version-form"
-            disabled={isUploading || !hasFiles || uploadableFiles.length === 0}
+            disabled={!hasFiles || uploadableFiles.length === 0}
+            isLoading={isUploading}
+            loadingLabel="Uploading..."
           >
-            {isUploading ? 'Uploading...' : 'Upload Version'}
+            Upload Version
           </Button>
         </>
       }

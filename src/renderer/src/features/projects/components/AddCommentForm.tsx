@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Button, Textarea } from '@/components/ui';
+import { Button, Textarea, useToast } from '@/components/ui';
 import { formatPlaybackTime } from '@/lib/time';
 
 interface AddCommentFormProps {
@@ -13,6 +13,7 @@ export function AddCommentForm({
   disabled = false,
   onSubmit,
 }: AddCommentFormProps) {
+  const toast = useToast();
   const [text, setText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -34,8 +35,11 @@ export function AddCommentForm({
         timestampSeconds: Number(currentTimeSeconds.toFixed(3)),
       });
       setText('');
+      toast.success('Comment posted', `Added at ${formatPlaybackTime(currentTimeSeconds)}.`);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Unable to post comment.');
+      const message = error instanceof Error ? error.message : 'Unable to post comment.';
+      setErrorMessage(message);
+      toast.error('Comment failed', message);
     } finally {
       setIsSubmitting(false);
     }
@@ -58,8 +62,13 @@ export function AddCommentForm({
         </p>
       ) : null}
 
-      <Button type="submit" disabled={disabled || isSubmitting}>
-        {isSubmitting ? 'Posting...' : 'Post Comment'}
+      <Button
+        type="submit"
+        disabled={disabled}
+        isLoading={isSubmitting}
+        loadingLabel="Posting..."
+      >
+        Post Comment
       </Button>
     </form>
   );

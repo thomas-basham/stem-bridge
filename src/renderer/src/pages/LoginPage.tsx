@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Button, Input } from '@/components/ui';
+import { Button, Input, useToast } from '@/components/ui';
 import { useAuth } from '@/features/auth/auth-context';
 
 const resolveRedirectPath = (state: unknown): string => {
@@ -15,6 +15,7 @@ const resolveRedirectPath = (state: unknown): string => {
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const toast = useToast();
   const { clearError, error, isLoading, login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -29,9 +30,11 @@ export function LoginPage() {
 
     try {
       await login({ email, password });
+      toast.success('Signed in', 'Your project workspace is ready.');
       navigate(resolveRedirectPath(location.state), { replace: true });
-    } catch {
-      // Error state is owned by the auth store and rendered below.
+    } catch (submitError) {
+      const message = submitError instanceof Error ? submitError.message : 'Unable to sign in.';
+      toast.error('Sign in failed', message);
     }
   };
 
@@ -87,8 +90,8 @@ export function LoginPage() {
           </p>
         ) : null}
 
-        <Button type="submit" fullWidth disabled={isLoading}>
-          {isLoading ? 'Signing In...' : 'Continue to Projects'}
+        <Button type="submit" fullWidth isLoading={isLoading} loadingLabel="Signing in...">
+          Continue to Projects
         </Button>
       </form>
 

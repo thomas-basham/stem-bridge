@@ -1,10 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Button, Input } from '@/components/ui';
+import { Button, Input, useToast } from '@/components/ui';
 import { useAuth } from '@/features/auth/auth-context';
 
 export function RegisterPage() {
   const navigate = useNavigate();
+  const toast = useToast();
   const { clearError, error, isLoading, register } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -20,9 +21,11 @@ export function RegisterPage() {
 
     try {
       await register({ name, email, password });
+      toast.success('Account created', 'Your StemBridge workspace is ready.');
       navigate('/projects', { replace: true });
-    } catch {
-      // Error state is owned by the auth store and rendered below.
+    } catch (submitError) {
+      const message = submitError instanceof Error ? submitError.message : 'Unable to create account.';
+      toast.error('Registration failed', message);
     }
   };
 
@@ -90,8 +93,8 @@ export function RegisterPage() {
           </p>
         ) : null}
 
-        <Button type="submit" fullWidth disabled={isLoading}>
-          {isLoading ? 'Creating Account...' : 'Create Account'}
+        <Button type="submit" fullWidth isLoading={isLoading} loadingLabel="Creating account...">
+          Create Account
         </Button>
       </form>
 

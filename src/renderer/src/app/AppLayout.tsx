@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Badge, Button } from '@/components/ui';
+import { Badge, Button, useToast } from '@/components/ui';
 import { useAuth } from '@/features/auth/auth-context';
 import { useDesktopMetadata } from '@/hooks/useDesktopMetadata';
 
@@ -16,6 +16,7 @@ const getUserDisplayName = (user: { name?: string; email?: string } | null): str
 
 export function AppLayout() {
   const navigate = useNavigate();
+  const toast = useToast();
   const { user, logout } = useAuth();
   const metadataState = useDesktopMetadata();
   const displayName = getUserDisplayName(user);
@@ -23,6 +24,7 @@ export function AppLayout() {
 
   const handleLogout = (): void => {
     logout();
+    toast.success('Signed out');
     navigate('/login', { replace: true });
   };
 

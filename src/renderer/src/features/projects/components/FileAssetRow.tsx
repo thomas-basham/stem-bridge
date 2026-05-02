@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Badge } from '@/components/ui';
+import { Badge, useToast } from '@/components/ui';
 import { versionsService } from '@/features/projects/versionsService';
 import { triggerBlobDownload } from '@/lib/file-download';
 import type { VersionFileAsset } from '@/types/api';
@@ -27,6 +27,7 @@ export function FileAssetRow({
   fileAsset,
   isWaveformSource = false,
 }: FileAssetRowProps) {
+  const toast = useToast();
   const [downloadState, setDownloadState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const hasDistinctOriginalName =
@@ -40,9 +41,12 @@ export function FileAssetRow({
       const download = await versionsService.downloadFile({ versionId, fileAsset });
       triggerBlobDownload(download.blob, download.fileName);
       setDownloadState('idle');
+      toast.success('Download started', download.fileName);
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to download file.';
       setDownloadState('error');
-      setDownloadError(error instanceof Error ? error.message : 'Unable to download file.');
+      setDownloadError(message);
+      toast.error('Download failed', message);
     }
   };
 

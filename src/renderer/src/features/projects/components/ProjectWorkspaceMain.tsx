@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ProjectSummary } from '@shared/types';
-import { Button, EmptyState, LoadingSpinner } from '@/components/ui';
+import { Button, EmptyState, LoadingSpinner, useToast } from '@/components/ui';
 import { WaveformPlayer, type WaveformPlayerHandle } from '@/components/player/WaveformPlayer';
 import { useVersionDetails } from '@/features/projects/useVersionDetails';
 import { versionsService } from '@/features/projects/versionsService';
@@ -15,6 +15,7 @@ interface ProjectWorkspaceMainProps {
 }
 
 export function ProjectWorkspaceMain({ project, selectedVersionId }: ProjectWorkspaceMainProps) {
+  const toast = useToast();
   const waveformRef = useRef<WaveformPlayerHandle | null>(null);
   const [currentPlaybackTime, setCurrentPlaybackTime] = useState(0);
   const [zipDownloadState, setZipDownloadState] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -54,9 +55,12 @@ export function ProjectWorkspaceMain({ project, selectedVersionId }: ProjectWork
       const download = await versionsService.downloadVersionZip(selectedVersion.id);
       triggerBlobDownload(download.blob, download.fileName);
       setZipDownloadState('idle');
+      toast.success('ZIP download started', download.fileName);
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to download version ZIP.';
       setZipDownloadState('error');
-      setZipDownloadError(error instanceof Error ? error.message : 'Unable to download version ZIP.');
+      setZipDownloadError(message);
+      toast.error('ZIP download failed', message);
     }
   };
 
@@ -77,9 +81,10 @@ export function ProjectWorkspaceMain({ project, selectedVersionId }: ProjectWork
             variant="secondary"
             size="sm"
             onClick={() => void handleDownloadVersionZip()}
-            disabled={zipDownloadState === 'loading'}
+            isLoading={zipDownloadState === 'loading'}
+            loadingLabel="Preparing ZIP..."
           >
-            {zipDownloadState === 'loading' ? 'Preparing ZIP...' : 'Download Version ZIP'}
+            Download Version ZIP
           </Button>
         ) : null}
       </div>

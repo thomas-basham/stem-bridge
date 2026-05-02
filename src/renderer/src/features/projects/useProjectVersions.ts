@@ -42,11 +42,11 @@ export function useProjectVersions(projectId: string): UseProjectVersionsResult 
       setState({ status: 'success', data: versions, errorMessage: null });
       return versions;
     } catch (error: unknown) {
-      setState({
+      setState((currentState) => ({
         status: 'error',
-        data: [],
+        data: currentState.data,
         errorMessage: error instanceof Error ? error.message : 'Unable to load versions.',
-      });
+      }));
       return [];
     }
   }, [projectId]);

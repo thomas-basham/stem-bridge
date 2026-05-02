@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Badge, EmptyState, LoadingSpinner } from '@/components/ui';
+import { Badge, EmptyState, LoadingSpinner, Skeleton } from '@/components/ui';
 import { VersionListItem } from '@/features/projects/components/VersionListItem';
 import type { UseProjectVersionsResult } from '@/features/projects/useProjectVersions';
 
@@ -15,6 +15,7 @@ export function VersionsSidebar({
   onSelectVersion,
 }: VersionsSidebarProps) {
   const versions = versionsState.data;
+  const hasCachedVersions = versions.length > 0;
 
   useEffect(() => {
     if (versionsState.status !== 'success') {
@@ -43,9 +44,23 @@ export function VersionsSidebar({
         <Badge tone={versions.length > 0 ? 'teal' : 'amber'}>{versions.length}</Badge>
       </div>
 
-      {versionsState.status === 'loading' ? (
+      {versionsState.status === 'loading' && !hasCachedVersions ? (
         <div className="versions-sidebar__loading">
-          <LoadingSpinner label="Loading versions..." size="sm" />
+          <div className="versions-sidebar__skeleton-list">
+            {Array.from({ length: 4 }, (_, index) => (
+              <div key={index} className="version-list-item version-list-item--skeleton">
+                <Skeleton width="42%" height={16} />
+                <Skeleton width="76%" height={18} />
+                <Skeleton width="54%" height={12} />
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {versionsState.status === 'loading' && hasCachedVersions ? (
+        <div className="inline-loading">
+          <LoadingSpinner label="Refreshing versions..." size="sm" />
         </div>
       ) : null}
 
@@ -60,11 +75,11 @@ export function VersionsSidebar({
       {versionsState.status === 'success' && versions.length === 0 ? (
         <EmptyState
           title="No versions yet"
-          description="Version uploads will appear here once the upload flow is connected."
+          description="Upload the first version to start collecting mixes, stems, notes, and timestamped feedback."
         />
       ) : null}
 
-      {versionsState.status === 'success' && versions.length > 0 ? (
+      {(versionsState.status === 'success' || hasCachedVersions) && versions.length > 0 ? (
         <div className="versions-list">
           {versions.map((version) => (
             <VersionListItem

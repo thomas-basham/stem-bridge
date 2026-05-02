@@ -60,9 +60,10 @@ export function CommentListItem({
           variant="ghost"
           size="sm"
           onClick={() => void onDelete(comment.id)}
-          disabled={deleting}
+          isLoading={deleting}
+          loadingLabel="Deleting..."
         >
-          {deleting ? 'Deleting...' : 'Delete'}
+          Delete
         </Button>
       ) : null}
     </li>

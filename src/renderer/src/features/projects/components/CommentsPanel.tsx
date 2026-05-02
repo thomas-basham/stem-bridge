@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { EmptyState, LoadingSpinner } from '@/components/ui';
+import { EmptyState, LoadingSpinner, useToast } from '@/components/ui';
 import { useAuth } from '@/features/auth/auth-context';
 import { useVersionComments } from '@/features/projects/useVersionComments';
 import { AddCommentForm } from './AddCommentForm';
@@ -16,6 +16,7 @@ export function CommentsPanel({
   currentTimeSeconds,
   onSeekComment,
 }: CommentsPanelProps) {
+  const toast = useToast();
   const { user } = useAuth();
   const commentsState = useVersionComments(versionId);
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
@@ -36,8 +37,11 @@ export function CommentsPanel({
 
     try {
       await commentsState.deleteComment(commentId);
+      toast.success('Comment deleted');
     } catch (error) {
-      setDeleteError(error instanceof Error ? error.message : 'Unable to delete comment.');
+      const message = error instanceof Error ? error.message : 'Unable to delete comment.';
+      setDeleteError(message);
+      toast.error('Delete failed', message);
     } finally {
       setDeletingCommentId(null);
     }

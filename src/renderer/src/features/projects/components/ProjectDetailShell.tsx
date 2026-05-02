@@ -19,8 +19,20 @@ export function ProjectDetailShell({ project }: ProjectDetailShellProps) {
   const versionsState = useProjectVersions(project.id);
 
   const handleUploadComplete = async (versionId: string): Promise<void> => {
-    await versionsState.refresh();
-    setSelectedVersionId(versionId);
+    const refreshedVersions = await versionsState.refresh();
+    const uploadedVersionExists = refreshedVersions.some((version) => version.id === versionId);
+
+    setSelectedVersionId((currentVersionId) => {
+      if (uploadedVersionExists) {
+        return versionId;
+      }
+
+      const currentVersionStillExists = refreshedVersions.some((version) => {
+        return version.id === currentVersionId;
+      });
+
+      return currentVersionStillExists ? currentVersionId : refreshedVersions[0]?.id ?? null;
+    });
   };
 
   return (

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { ProjectSummary } from '@shared/types';
-import { Badge, Button, EmptyState, Input, LoadingSpinner, Modal } from '@/components/ui';
+import { Badge, Button, EmptyState, Input, Modal, Skeleton, useToast } from '@/components/ui';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { StatCard } from '@/components/ui/StatCard';
@@ -46,6 +46,7 @@ interface CreateProjectModalProps {
 
 function CreateProjectModal({ open, onClose, onCreateProject }: CreateProjectModalProps) {
   const navigate = useNavigate();
+  const toast = useToast();
   const [name, setName] = useState('');
   const [bpm, setBpm] = useState('');
   const [musicalKey, setMusicalKey] = useState('');
@@ -80,11 +81,14 @@ function CreateProjectModal({ open, onClose, onCreateProject }: CreateProjectMod
         musicalKey: musicalKey.trim() || undefined,
       });
 
+      toast.success('Project created', `${project.name} is ready for versions and files.`);
       resetForm();
       onClose();
       navigate(`/projects/${project.id}`);
     } catch (error) {
-      setErrorMessage(getApiErrorMessage(error, 'Unable to create project.'));
+      const message = getApiErrorMessage(error, 'Unable to create project.');
+      setErrorMessage(message);
+      toast.error('Project creation failed', message);
     } finally {
       setIsSubmitting(false);
     }
@@ -95,14 +99,20 @@ function CreateProjectModal({ open, onClose, onCreateProject }: CreateProjectMod
       open={open}
       title="New Project"
       description="Create a workspace for versions, files, collaborators, and notes."
+      closeDisabled={isSubmitting}
       onClose={handleClose}
       footer={
         <>
           <Button type="button" variant="ghost" onClick={handleClose} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button type="submit" form="create-project-form" disabled={isSubmitting}>
-            {isSubmitting ? 'Creating...' : 'Create Project'}
+          <Button
+            type="submit"
+            form="create-project-form"
+            isLoading={isSubmitting}
+            loadingLabel="Creating..."
+          >
+            Create Project
           </Button>
         </>
       }
@@ -147,6 +157,44 @@ function CreateProjectModal({ open, onClose, onCreateProject }: CreateProjectMod
         ) : null}
       </form>
     </Modal>
+  );
+}
+
+function ProjectGridSkeleton() {
+  return (
+    <div className="project-grid" aria-hidden="true">
+      {Array.from({ length: 6 }, (_, index) => (
+        <div key={index} className="project-card project-card--skeleton">
+          <div className="project-card__header">
+            <div>
+              <Skeleton width={180} height={20} />
+              <Skeleton width={130} height={14} />
+            </div>
+            <Skeleton width={72} height={32} />
+          </div>
+
+          <div className="project-card__meta">
+            <span>
+              <Skeleton width={44} height={18} />
+              BPM
+            </span>
+            <span>
+              <Skeleton width={70} height={18} />
+              Key
+            </span>
+            <span>
+              <Skeleton width={34} height={18} />
+              Collaborators
+            </span>
+          </div>
+
+          <div className="project-card__footer">
+            <Skeleton width={150} height={14} />
+            <Skeleton width={94} height={14} />
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -200,15 +248,16 @@ export function ProjectsPage() {
 
   const projects = projectsState.data;
   const isLoading = projectsState.status === 'loading';
-  const projectCount = projectsState.status === 'success' ? String(projects.length) : '...';
+  const loadingValue = <Skeleton className="stat-card__skeleton" width={58} height={34} />;
+  const projectCount = projectsState.status === 'success' ? String(projects.length) : loadingValue;
   const versionCount =
     projectsState.status === 'success'
       ? String(projects.reduce((total, project) => total + project.versionCount, 0))
-      : '...';
+      : loadingValue;
   const collaboratorCount =
     projectsState.status === 'success'
       ? String(projects.reduce((total, project) => total + project.collaboratorCount, 0))
-      : '...';
+      : loadingValue;
 
   return (
     <>
@@ -217,7 +266,11 @@ export function ProjectsPage() {
         title="Project Dashboard"
         description="Track your StemBridge workspaces, collaborators, tempo notes, keys, and version activity."
         actions={
-          <Button type="button" onClick={() => setIsCreateModalOpen(true)}>
+          <Button
+            type="button"
+            onClick={() => setIsCreateModalOpen(true)}
+            disabled={projectsState.status === 'loading'}
+          >
             New Project
           </Button>
         }
@@ -238,11 +291,7 @@ export function ProjectsPage() {
           subtitle="Open a project to manage versions, files, feedback, and collaborators."
           action={<Badge tone="violet">GET /projects</Badge>}
         >
-          {isLoading ? (
-            <div className="loading-state">
-              <LoadingSpinner label="Loading projects..." />
-            </div>
-          ) : null}
+          {isLoading ? <ProjectGridSkeleton /> : null}
 
           {projectsState.status === 'error' ? (
             <EmptyState
@@ -260,7 +309,7 @@ export function ProjectsPage() {
           {projectsState.status === 'success' && projects.length === 0 ? (
             <EmptyState
               title="No projects yet"
-              description="Create a project to start collecting versions, files, and collaborator feedback."
+              description="Create a project, then upload a first version to collect mixes, stems, MIDI, samples, and timeline feedback in one workspace."
               action={
                 <Button type="button" onClick={() => setIsCreateModalOpen(true)}>
                   New Project
