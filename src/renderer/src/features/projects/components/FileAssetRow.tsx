@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Badge } from '@/components/ui';
 import { versionsService } from '@/features/projects/versionsService';
+import { triggerBlobDownload } from '@/lib/file-download';
 import type { VersionFileAsset } from '@/types/api';
 
 interface FileAssetRowProps {
@@ -19,18 +20,6 @@ const formatFileSize = (sizeBytes: number): string => {
   }
 
   return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
-};
-
-const triggerBlobDownload = (blob: Blob, fileName: string): void => {
-  const objectUrl = window.URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = objectUrl;
-  link.download = fileName;
-  link.style.display = 'none';
-  document.body.append(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 1000);
 };
 
 export function FileAssetRow({

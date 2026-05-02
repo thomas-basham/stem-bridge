@@ -1214,6 +1214,12 @@ a {
   color: var(--text-soft);
 }
 
+.version-download-error {
+  margin: -6px 0 0;
+  color: var(--color-danger);
+  font-size: 0.9rem;
+}
+
 .version-files-panel {
   display: grid;
   gap: 14px;

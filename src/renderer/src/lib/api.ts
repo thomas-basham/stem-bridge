@@ -59,6 +59,34 @@ export const getApiErrorMessage = (error: unknown, fallback = 'Request failed.')
   return error instanceof Error ? error.message : fallback;
 };
 
+export const getBlobApiErrorMessage = async (
+  error: unknown,
+  fallback = 'Request failed.',
+): Promise<string> => {
+  if (!axios.isAxiosError<ApiResponse<unknown> | Blob>(error)) {
+    return error instanceof Error ? error.message : fallback;
+  }
+
+  const responseData = error.response?.data;
+
+  if (responseData instanceof Blob) {
+    let responseText = '';
+
+    try {
+      responseText = await responseData.text();
+
+      if (responseText.trim()) {
+        const parsedResponse = JSON.parse(responseText) as Partial<ApiResponse<unknown>>;
+        return parsedResponse.message || responseText || fallback;
+      }
+    } catch {
+      return responseText || error.response?.statusText || error.message || fallback;
+    }
+  }
+
+  return getApiErrorMessage(error, fallback);
+};
+
 export const apiRequest = async <T>(config: AxiosRequestConfig): Promise<T> => {
   const response = await apiClient.request<ApiResponse<T>>(config);
   return response.data.data;
@@ -315,6 +343,20 @@ export const versionsApi = {
     return {
       blob: response.data,
       fileName: getDownloadFileName(response.headers['content-disposition']) || 'download',
+    };
+  },
+
+  async downloadVersionZip(versionId: string): Promise<FileDownloadResponse> {
+    const response = await apiClient.request<Blob>({
+      method: 'GET',
+      url: `/versions/${versionId}/download`,
+      responseType: 'blob',
+    });
+
+    return {
+      blob: response.data,
+      fileName:
+        getDownloadFileName(response.headers['content-disposition']) || `version-${versionId}.zip`,
     };
   },
 };

@@ -1,5 +1,10 @@
 import axios from 'axios';
-import { getApiErrorMessage, projectsApi, versionsApi } from '@/lib/api';
+import {
+  getApiErrorMessage,
+  getBlobApiErrorMessage,
+  projectsApi,
+  versionsApi,
+} from '@/lib/api';
 import type {
   SongVersion,
   VersionFileAsset,
@@ -179,6 +184,34 @@ export const versionsService = {
       throw error instanceof Error
         ? error
         : new Error(`Unable to download ${params.fileAsset.name}.`);
+    }
+  },
+
+  async downloadVersionZip(versionId: string): Promise<{ blob: Blob; fileName: string }> {
+    if (useMockProjectData) {
+      await wait(160);
+      const version = getMockVersionById(versionId);
+
+      if (!version) {
+        throw new Error('Unable to download version.');
+      }
+
+      return {
+        blob: new Blob([`Mock ZIP package for version ${version.versionNumber}`], {
+          type: 'application/zip',
+        }),
+        fileName: `version-${version.versionNumber}.zip`,
+      };
+    }
+
+    try {
+      return await versionsApi.downloadVersionZip(versionId);
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(await getBlobApiErrorMessage(error, 'Unable to download version ZIP.'));
+      }
+
+      throw error instanceof Error ? error : new Error('Unable to download version ZIP.');
     }
   },
 };
