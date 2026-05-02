@@ -1,7 +1,9 @@
+import { useCallback, useRef, useState } from 'react';
 import type { ProjectSummary } from '@shared/types';
 import { EmptyState, LoadingSpinner } from '@/components/ui';
-import { WaveformPlayer } from '@/components/player/WaveformPlayer';
+import { WaveformPlayer, type WaveformPlayerHandle } from '@/components/player/WaveformPlayer';
 import { useVersionDetails } from '@/features/projects/useVersionDetails';
+import { CommentsPanel } from './CommentsPanel';
 import { VersionFilesPanel } from './VersionFilesPanel';
 import { formatProjectDate, getUserLabel } from './project-detail-format';
 
@@ -11,9 +13,25 @@ interface ProjectWorkspaceMainProps {
 }
 
 export function ProjectWorkspaceMain({ project, selectedVersionId }: ProjectWorkspaceMainProps) {
+  const waveformRef = useRef<WaveformPlayerHandle | null>(null);
+  const [currentPlaybackTime, setCurrentPlaybackTime] = useState(0);
   const versionState = useVersionDetails(selectedVersionId);
   const selectedVersion = versionState.status === 'success' ? versionState.data : null;
   const primaryMixFile = selectedVersion?.fileAssets?.find((fileAsset) => fileAsset.type === 'MIX');
+  const handleWaveformTimeChange = useCallback((timeSeconds: number): void => {
+    setCurrentPlaybackTime((previousTime) => {
+      if (timeSeconds === 0 || Math.abs(previousTime - timeSeconds) >= 0.25) {
+        return timeSeconds;
+      }
+
+      return previousTime;
+    });
+  }, []);
+
+  const handleSeekComment = useCallback((timestampSeconds: number): void => {
+    waveformRef.current?.seekTo(timestampSeconds);
+    setCurrentPlaybackTime(timestampSeconds);
+  }, []);
 
   return (
     <main className="project-detail-panel project-detail-panel--workspace">
@@ -70,7 +88,12 @@ export function ProjectWorkspaceMain({ project, selectedVersionId }: ProjectWork
             </div>
           </div>
 
-          <WaveformPlayer versionId={selectedVersion.id} mixFile={primaryMixFile} />
+          <WaveformPlayer
+            ref={waveformRef}
+            versionId={selectedVersion.id}
+            mixFile={primaryMixFile}
+            onTimeChange={handleWaveformTimeChange}
+          />
 
           <div className="version-notes-panel">
             <span>Notes</span>
@@ -81,19 +104,14 @@ export function ProjectWorkspaceMain({ project, selectedVersionId }: ProjectWork
             versionId={selectedVersion.id}
             files={selectedVersion.fileAssets ?? []}
           />
+
+          <CommentsPanel
+            versionId={selectedVersion.id}
+            currentTimeSeconds={currentPlaybackTime}
+            onSeekComment={handleSeekComment}
+          />
         </>
       ) : null}
-
-      <div className="project-comments-placeholder">
-        <EmptyState
-          title={selectedVersion ? 'No comments selected' : 'Comments pending'}
-          description={
-            selectedVersion
-              ? 'Timestamped feedback, markers, and comment threads will live below the waveform.'
-              : 'Select a version to load its comment timeline.'
-          }
-        />
-      </div>
     </main>
   );
 }

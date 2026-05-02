@@ -11,6 +11,7 @@ import type {
   ProjectMember,
   SongVersion,
   User,
+  VersionComment,
   VersionFileAsset,
   VersionFileAssetType,
 } from '@/types/api';
@@ -98,6 +99,19 @@ interface FileUploadResponse {
   file: VersionFileAsset;
 }
 
+interface CommentsResponse {
+  comments: VersionComment[];
+}
+
+interface CommentResponse {
+  comment: VersionComment;
+}
+
+interface DeleteCommentResponse {
+  deleted: boolean;
+  commentId: string;
+}
+
 export interface FileDownloadResponse {
   blob: Blob;
   fileName: string;
@@ -114,9 +128,8 @@ export interface CreateVersionPayload {
 }
 
 export interface CommentPayload {
-  body: string;
-  songVersionId?: string;
-  timestampSeconds?: number;
+  text: string;
+  timestampSeconds: number;
 }
 
 export interface InvitePayload {
@@ -287,11 +300,25 @@ const getDownloadFileName = (contentDisposition: unknown): string | null => {
 };
 
 export const commentsApi = {
-  create: (projectId: string, payload: CommentPayload): Promise<Comment> =>
-    apiRequest<Comment>({ method: 'POST', url: `/projects/${projectId}/comments`, data: payload }),
+  async list(versionId: string): Promise<VersionComment[]> {
+    const response = await apiRequest<CommentsResponse>({
+      method: 'GET',
+      url: `/versions/${versionId}/comments`,
+    });
+    return response.comments;
+  },
 
-  resolve: (commentId: string): Promise<Comment> =>
-    apiRequest<Comment>({ method: 'PATCH', url: `/comments/${commentId}`, data: { status: 'resolved' } }),
+  async create(versionId: string, payload: CommentPayload): Promise<VersionComment> {
+    const response = await apiRequest<CommentResponse>({
+      method: 'POST',
+      url: `/versions/${versionId}/comments`,
+      data: payload,
+    });
+    return response.comment;
+  },
+
+  remove: (commentId: string): Promise<DeleteCommentResponse> =>
+    apiRequest<DeleteCommentResponse>({ method: 'DELETE', url: `/comments/${commentId}` }),
 };
 
 export const invitesApi = {

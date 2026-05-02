@@ -80,6 +80,7 @@ export interface VersionFileAsset {
 
 export interface VersionComment {
   id: string;
+  versionId?: string;
   timestampSeconds: number;
   text: string;
   createdAt: string;

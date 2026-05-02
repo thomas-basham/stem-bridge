@@ -1349,6 +1349,126 @@ a {
   gap: 14px;
 }
 
+.comments-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.comments-panel__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.comments-panel__header h4 {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.comments-panel__header p {
+  margin: 4px 0 0;
+  color: var(--text-soft);
+  font-size: 0.9rem;
+}
+
+.add-comment-form {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.026);
+}
+
+.add-comment-form .ui-button {
+  justify-self: flex-start;
+}
+
+.add-comment-form__error,
+.comments-panel__error {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: 0.9rem;
+}
+
+.comments-panel__loading {
+  display: grid;
+  place-items: center;
+  min-height: 80px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.comment-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.comment-list-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.026);
+}
+
+.comment-list-item__seek {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 58px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgba(101, 244, 215, 0.24);
+  border-radius: var(--radius-sm);
+  background: rgba(101, 244, 215, 0.08);
+  color: var(--teal);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.comment-list-item__seek:hover {
+  border-color: rgba(101, 244, 215, 0.42);
+  background: rgba(101, 244, 215, 0.12);
+}
+
+.comment-list-item__body {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.comment-list-item__body p {
+  margin: 0;
+  color: var(--text-soft);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.comment-list-item__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.comment-list-item__meta strong {
+  color: var(--text);
+}
+
+.comment-list-item__meta span {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
 .project-collaborators {
   display: grid;
   gap: 12px;
@@ -1753,6 +1873,7 @@ a {
   .upload-file-list__item,
   .project-detail-header__stats,
   .selected-version-summary,
+  .comment-list-item,
   .project-card__meta {
     grid-template-columns: 1fr;
   }
