@@ -18,6 +18,21 @@ Unsigned local build:
 
 - `npm run make`
 
+## GitHub Release Automation
+
+Pushing to `main` runs `.github/workflows/release.yml`. The workflow:
+
+- runs lint, typecheck, and tests
+- bumps the patch version in `package.json` and `package-lock.json`
+- commits the version bump back to `main` as `ci(release): vX.Y.Z [skip ci]`
+- tags the commit as `vX.Y.Z`
+- builds and uploads macOS, Windows, and Linux app artifacts
+- publishes the GitHub release after all platform artifacts upload
+
+The workflow uses the repository `GITHUB_TOKEN`, so GitHub Actions must have
+read/write `contents` permission and branch protection must allow the action to
+push the version bump commit and tag.
+
 Signed and notarized release build:
 
 - Install a `Developer ID Application` certificate in Keychain.
