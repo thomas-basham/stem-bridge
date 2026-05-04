@@ -1,17 +1,20 @@
 import { useMemo, useState } from 'react';
 import { EmptyState, LoadingSpinner, useToast } from '@/components/ui';
 import { useAuth } from '@/features/auth/auth-context';
+import { notifyProjectActivityChanged } from '@/features/projects/projectActivityEvents';
 import { useVersionComments } from '@/features/projects/useVersionComments';
 import { AddCommentForm } from './AddCommentForm';
 import { CommentList } from './CommentList';
 
 interface CommentsPanelProps {
+  projectId: string;
   versionId: string;
   currentTimeSeconds: number;
   onSeekComment: (timestampSeconds: number) => void;
 }
 
 export function CommentsPanel({
+  projectId,
   versionId,
   currentTimeSeconds,
   onSeekComment,
@@ -61,6 +64,7 @@ export function CommentsPanel({
         disabled={commentsState.status === 'loading'}
         onSubmit={async (payload) => {
           await commentsState.createComment(payload);
+          notifyProjectActivityChanged(projectId);
         }}
       />
 

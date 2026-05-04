@@ -1,5 +1,7 @@
 import type { ActivityEventType, VersionFileAssetType } from '@/types/api';
 
+const encodePathSegment = (value: string): string => encodeURIComponent(value);
+
 export const APP_ROUTES = {
   root: '/',
   login: '/login',
@@ -7,7 +9,7 @@ export const APP_ROUTES = {
   projects: '/projects',
   projectDetailPattern: '/projects/:projectId',
   projectDetail(projectId: string): string {
-    return `/projects/${projectId}`;
+    return `/projects/${encodePathSegment(projectId)}`;
   },
   notFound: '*',
 } as const;
@@ -21,52 +23,52 @@ export const API_ENDPOINTS = {
   projects: {
     list: '/projects',
     detail(projectId: string): string {
-      return `/projects/${projectId}`;
+      return `/projects/${encodePathSegment(projectId)}`;
     },
     members(projectId: string): string {
-      return `/projects/${projectId}/members`;
+      return `/projects/${encodePathSegment(projectId)}/members`;
     },
     versions(projectId: string): string {
-      return `/projects/${projectId}/versions`;
+      return `/projects/${encodePathSegment(projectId)}/versions`;
     },
     files(projectId: string): string {
-      return `/projects/${projectId}/files`;
+      return `/projects/${encodePathSegment(projectId)}/files`;
     },
     comments(projectId: string): string {
-      return `/projects/${projectId}/comments`;
+      return `/projects/${encodePathSegment(projectId)}/comments`;
     },
     activity(projectId: string): string {
-      return `/projects/${projectId}/activity`;
+      return `/projects/${encodePathSegment(projectId)}/activity`;
     },
     invites(projectId: string): string {
-      return `/projects/${projectId}/invites`;
+      return `/projects/${encodePathSegment(projectId)}/invites`;
     },
   },
   versions: {
     detail(versionId: string): string {
-      return `/versions/${versionId}`;
+      return `/versions/${encodePathSegment(versionId)}`;
     },
     fileUpload(versionId: string): string {
-      return `/versions/${versionId}/files/upload`;
+      return `/versions/${encodePathSegment(versionId)}/files/upload`;
     },
     fileDownload(versionId: string, fileId: string): string {
-      return `/versions/${versionId}/files/${fileId}/download`;
+      return `/versions/${encodePathSegment(versionId)}/files/${encodePathSegment(fileId)}/download`;
     },
     downloadZip(versionId: string): string {
-      return `/versions/${versionId}/download`;
+      return `/versions/${encodePathSegment(versionId)}/download`;
     },
     comments(versionId: string): string {
-      return `/versions/${versionId}/comments`;
+      return `/versions/${encodePathSegment(versionId)}/comments`;
     },
   },
   comments: {
     detail(commentId: string): string {
-      return `/comments/${commentId}`;
+      return `/comments/${encodePathSegment(commentId)}`;
     },
   },
   invites: {
     detail(inviteId: string): string {
-      return `/invites/${inviteId}`;
+      return `/invites/${encodePathSegment(inviteId)}`;
     },
   },
 } as const;
@@ -84,6 +86,8 @@ export const DEFAULT_ACTIVITY_QUERY = {
   page: 1,
   pageSize: 20,
 } as const;
+
+export const ACTIVITY_FEED_POLL_INTERVAL_MS = 5000;
 
 export const ACTIVITY_EVENT_TYPES = {
   projectCreated: 'PROJECT_CREATED',

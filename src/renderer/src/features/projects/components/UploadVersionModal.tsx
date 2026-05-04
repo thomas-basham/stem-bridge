@@ -4,6 +4,7 @@ import { FileDropzone } from '@/components/upload/FileDropzone';
 import { UploadFileList } from '@/components/upload/UploadFileList';
 import type { PendingUploadFile } from '@/components/upload/uploadTypes';
 import { DEFAULT_UPLOAD_FILE_TYPE } from '@/constants/app-constants';
+import { notifyProjectActivityChanged } from '@/features/projects/projectActivityEvents';
 import { versionsService } from '@/features/projects/versionsService';
 
 interface UploadVersionModalProps {
@@ -116,6 +117,7 @@ export function UploadVersionModal({
       }
 
       await onComplete(versionId);
+      notifyProjectActivityChanged(projectId);
 
       if (failedUploads > 0) {
         const message = 'One or more files failed to upload. Fix the file list and retry.';

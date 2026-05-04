@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ProjectSummary } from '@shared/types';
 import { Button, EmptyState, LoadingSpinner } from '@/components/ui';
+import { notifyProjectActivityChanged } from '@/features/projects/projectActivityEvents';
 import { useProjectInvites } from '@/features/projects/useProjectInvites';
 import { InviteCollaboratorModal } from './InviteCollaboratorModal';
 import { InviteList } from './InviteList';
@@ -99,6 +100,7 @@ export function CollaboratorsPanel({
         onClose={() => setIsInviteModalOpen(false)}
         onInvite={async (email) => {
           await invitesState.createInvite({ email });
+          notifyProjectActivityChanged(projectId);
         }}
       />
     </>

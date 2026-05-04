@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { versionsService } from '@/features/projects/versionsService';
+import { useMountedRef } from '@/hooks/useMountedRef';
 import type { SongVersion } from '@/types/api';
 
 export type ProjectVersionsState =
@@ -24,6 +25,8 @@ export type UseProjectVersionsResult = ProjectVersionsState & {
 };
 
 export function useProjectVersions(projectId: string): UseProjectVersionsResult {
+  const isMountedRef = useMountedRef();
+  const requestIdRef = useRef(0);
   const [state, setState] = useState<ProjectVersionsState>({
     status: 'loading',
     data: [],
@@ -31,6 +34,9 @@ export function useProjectVersions(projectId: string): UseProjectVersionsResult 
   });
 
   const refresh = useCallback(async (): Promise<SongVersion[]> => {
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+
     setState((currentState) => ({
       status: 'loading',
       data: currentState.data,
@@ -39,9 +45,17 @@ export function useProjectVersions(projectId: string): UseProjectVersionsResult 
 
     try {
       const versions = await versionsService.list(projectId);
-      setState({ status: 'success', data: versions, errorMessage: null });
+
+      if (isMountedRef.current && requestId === requestIdRef.current) {
+        setState({ status: 'success', data: versions, errorMessage: null });
+      }
+
       return versions;
     } catch (error: unknown) {
+      if (!isMountedRef.current || requestId !== requestIdRef.current) {
+        return [];
+      }
+
       setState((currentState) => ({
         status: 'error',
         data: currentState.data,
@@ -49,7 +63,7 @@ export function useProjectVersions(projectId: string): UseProjectVersionsResult 
       }));
       return [];
     }
-  }, [projectId]);
+  }, [isMountedRef, projectId]);
 
   useEffect(() => {
     void refresh();

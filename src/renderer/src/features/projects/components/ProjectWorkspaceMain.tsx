@@ -158,6 +158,7 @@ export function ProjectWorkspaceMain({ project, selectedVersionId }: ProjectWork
           />
 
           <CommentsPanel
+            projectId={project.id}
             versionId={selectedVersion.id}
             currentTimeSeconds={currentPlaybackTime}
             onSeekComment={handleSeekComment}

@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { invitesService } from '@/features/projects/invitesService';
+import { useMountedRef } from '@/hooks/useMountedRef';
 import type { Invite } from '@/types/api';
 
 type ProjectInvitesState =
@@ -25,6 +26,8 @@ type UseProjectInvitesResult = ProjectInvitesState & {
 };
 
 export function useProjectInvites(projectId: string): UseProjectInvitesResult {
+  const isMountedRef = useMountedRef();
+  const requestIdRef = useRef(0);
   const [state, setState] = useState<ProjectInvitesState>({
     status: 'loading',
     data: [],
@@ -32,6 +35,9 @@ export function useProjectInvites(projectId: string): UseProjectInvitesResult {
   });
 
   const refresh = useCallback(async (): Promise<void> => {
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+
     setState((currentState) => ({
       status: 'loading',
       data: currentState.data,
@@ -40,15 +46,24 @@ export function useProjectInvites(projectId: string): UseProjectInvitesResult {
 
     try {
       const invites = await invitesService.list(projectId);
+
+      if (!isMountedRef.current || requestId !== requestIdRef.current) {
+        return;
+      }
+
       setState({ status: 'success', data: invites, errorMessage: null });
     } catch (error) {
+      if (!isMountedRef.current || requestId !== requestIdRef.current) {
+        return;
+      }
+
       setState((currentState) => ({
         status: 'error',
         data: currentState.data,
         errorMessage: error instanceof Error ? error.message : 'Unable to load invites.',
       }));
     }
-  }, [projectId]);
+  }, [isMountedRef, projectId]);
 
   const createInvite = useCallback(
     async (payload: { email: string }): Promise<Invite> => {

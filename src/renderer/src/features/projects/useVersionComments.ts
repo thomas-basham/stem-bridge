@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { commentsService } from '@/features/projects/commentsService';
+import { useMountedRef } from '@/hooks/useMountedRef';
 import type { VersionComment } from '@/types/api';
 
 type VersionCommentsState =
@@ -31,6 +32,8 @@ type UseVersionCommentsResult = VersionCommentsState & {
 };
 
 export function useVersionComments(versionId: string | null): UseVersionCommentsResult {
+  const isMountedRef = useMountedRef();
+  const requestIdRef = useRef(0);
   const [state, setState] = useState<VersionCommentsState>({
     status: 'idle',
     data: [],
@@ -38,6 +41,9 @@ export function useVersionComments(versionId: string | null): UseVersionComments
   });
 
   const refresh = useCallback(async (): Promise<void> => {
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+
     if (!versionId) {
       setState({ status: 'idle', data: [], errorMessage: null });
       return;
@@ -51,15 +57,24 @@ export function useVersionComments(versionId: string | null): UseVersionComments
 
     try {
       const comments = await commentsService.list(versionId);
+
+      if (!isMountedRef.current || requestId !== requestIdRef.current) {
+        return;
+      }
+
       setState({ status: 'success', data: comments, errorMessage: null });
     } catch (error: unknown) {
+      if (!isMountedRef.current || requestId !== requestIdRef.current) {
+        return;
+      }
+
       setState({
         status: 'error',
         data: [],
         errorMessage: error instanceof Error ? error.message : 'Unable to load comments.',
       });
     }
-  }, [versionId]);
+  }, [isMountedRef, versionId]);
 
   const createComment = useCallback(
     async (payload: { text: string; timestampSeconds: number }): Promise<VersionComment> => {

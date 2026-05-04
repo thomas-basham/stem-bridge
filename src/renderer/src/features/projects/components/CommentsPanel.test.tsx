@@ -41,6 +41,7 @@ describe('CommentsPanel', () => {
     const user = userEvent.setup();
     renderWithAppProviders(
       <CommentsPanel
+        projectId="project-1"
         versionId="version-1"
         currentTimeSeconds={42.25}
         onSeekComment={vi.fn()}

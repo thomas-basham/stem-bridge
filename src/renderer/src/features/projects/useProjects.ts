@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ProjectSummary } from '@shared/types';
 import { projectsService } from '@/features/projects/projectsService';
+import { useMountedRef } from '@/hooks/useMountedRef';
 
 interface CreateProjectInput {
   name: string;
@@ -31,6 +32,8 @@ type UseProjectsResult = ProjectsState & {
 };
 
 export function useProjects(): UseProjectsResult {
+  const isMountedRef = useMountedRef();
+  const requestIdRef = useRef(0);
   const [state, setState] = useState<ProjectsState>({
     status: 'loading',
     data: [],
@@ -38,6 +41,9 @@ export function useProjects(): UseProjectsResult {
   });
 
   const refresh = useCallback(async (): Promise<void> => {
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+
     setState((currentState) => ({
       status: 'loading',
       data: currentState.data,
@@ -47,19 +53,27 @@ export function useProjects(): UseProjectsResult {
     try {
       const projects = await projectsService.list();
 
+      if (!isMountedRef.current || requestId !== requestIdRef.current) {
+        return;
+      }
+
       setState({
         status: 'success',
         data: projects,
         errorMessage: null,
       });
     } catch (error: unknown) {
+      if (!isMountedRef.current || requestId !== requestIdRef.current) {
+        return;
+      }
+
       setState((currentState) => ({
         status: 'error',
         data: currentState.data,
         errorMessage: error instanceof Error ? error.message : 'Unable to load project workspace.',
       }));
     }
-  }, []);
+  }, [isMountedRef]);
 
   const createProject = useCallback(
     async (input: CreateProjectInput): Promise<ProjectSummary> => {
