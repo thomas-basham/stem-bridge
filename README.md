@@ -12,6 +12,37 @@ Desktop-first frontend MVP for a music collaboration app built with Electron, Re
 - `npm run typecheck`
 - `npm run format`
 
+## macOS Release Builds
+
+Unsigned local build:
+
+- `npm run make`
+
+Signed and notarized release build:
+
+- Install a `Developer ID Application` certificate in Keychain.
+- Confirm it is available with `security find-identity -p codesigning -v`.
+- Set one notarization credential option before running `npm run make`.
+
+Apple ID app-specific password:
+
+```sh
+export MAC_CODESIGN=true
+export APPLE_ID="your-apple-id@example.com"
+export APPLE_APP_SPECIFIC_PASSWORD="xxxx-xxxx-xxxx-xxxx"
+export APPLE_TEAM_ID="YOURTEAMID"
+npm run make
+```
+
+Stored notarytool keychain profile:
+
+```sh
+xcrun notarytool store-credentials "stembridge-notary"
+export MAC_CODESIGN=true
+export APPLE_KEYCHAIN_PROFILE="stembridge-notary"
+npm run make
+```
+
 ## Environment
 
 Optional renderer environment variables:
