@@ -15,6 +15,164 @@ interface WaveformPlayerProps {
 
 type WaveformStatus = 'idle' | 'loading' | 'ready' | 'error';
 
+const nonAudioBlobTypePattern = /(?:^text\/|json|html|xml)/i;
+const audioFileExtensionPattern = /\.(?:aac|aif|aiff|flac|m4a|mp3|ogg|opus|wav|webm)$/i;
+const browserPlayableAudioDescription = 'WAV, MP3, M4A, FLAC, OGG, or WebM';
+
+const startsWithBytes = (bytes: Uint8Array, signature: number[], offset = 0): boolean => {
+  if (bytes.length < offset + signature.length) {
+    return false;
+  }
+
+  return signature.every((byte, index) => bytes[offset + index] === byte);
+};
+
+const readUInt32LE = (bytes: Uint8Array, offset: number): number => {
+  return (
+    bytes[offset] |
+    (bytes[offset + 1] << 8) |
+    (bytes[offset + 2] << 16) |
+    (bytes[offset + 3] << 24)
+  ) >>> 0;
+};
+
+const hasUtf8ReplacementBytes = (bytes: Uint8Array): boolean => {
+  for (let index = 0; index <= bytes.length - 3; index += 1) {
+    if (bytes[index] === 0xef && bytes[index + 1] === 0xbf && bytes[index + 2] === 0xbd) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+const isRiffWave = (bytes: Uint8Array): boolean => {
+  return startsWithBytes(bytes, [0x52, 0x49, 0x46, 0x46]) && startsWithBytes(bytes, [0x57, 0x41, 0x56, 0x45], 8);
+};
+
+const isKnownAudioContainer = (bytes: Uint8Array): boolean => {
+  return (
+    isRiffWave(bytes) ||
+    startsWithBytes(bytes, [0x49, 0x44, 0x33]) ||
+    startsWithBytes(bytes, [0x4f, 0x67, 0x67, 0x53]) ||
+    startsWithBytes(bytes, [0x66, 0x4c, 0x61, 0x43]) ||
+    startsWithBytes(bytes, [0x1a, 0x45, 0xdf, 0xa3]) ||
+    startsWithBytes(bytes, [0x66, 0x74, 0x79, 0x70], 4)
+  );
+};
+
+const readBlobHeaderText = async (blob: Blob): Promise<string> => {
+  const header = await blob.slice(0, 512).arrayBuffer();
+  return new TextDecoder('utf-8', { fatal: false }).decode(header).replace(/\0/g, '').trim();
+};
+
+const getTextDownloadErrorMessage = (fileName: string, headerText: string): string => {
+  if (headerText.startsWith('{')) {
+    try {
+      const parsedHeader = JSON.parse(headerText) as { message?: unknown };
+
+      if (typeof parsedHeader.message === 'string' && parsedHeader.message.trim()) {
+        return `Downloaded ${fileName} returned an API error: ${parsedHeader.message.trim()}`;
+      }
+    } catch {
+      return `Downloaded ${fileName} returned JSON instead of audio.`;
+    }
+
+    return `Downloaded ${fileName} returned JSON instead of audio.`;
+  }
+
+  if (/^<!doctype html|^<html/i.test(headerText)) {
+    return `Downloaded ${fileName} returned HTML instead of audio.`;
+  }
+
+  if (/^<\?xml|^<Error/i.test(headerText)) {
+    return `Downloaded ${fileName} returned XML instead of audio.`;
+  }
+
+  return `Downloaded ${fileName} returned text instead of audio.`;
+};
+
+const getWaveformErrorMessage = (error: unknown, fileName?: string): string => {
+  const unsupportedAudioMessage = `The downloaded${
+    fileName ? ` ${fileName}` : ''
+  } file could not be decoded as browser-playable audio. Export and re-upload it as ${browserPlayableAudioDescription}.`;
+
+  if (error instanceof Error) {
+    if (error.message.includes('DEMUXER_ERROR_COULD_NOT_OPEN')) {
+      return unsupportedAudioMessage;
+    }
+
+    return error.message;
+  }
+
+  if (typeof error === 'string' && error.trim()) {
+    if (error.includes('DEMUXER_ERROR_COULD_NOT_OPEN')) {
+      return unsupportedAudioMessage;
+    }
+
+    return error.trim();
+  }
+
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    typeof error.message === 'string' &&
+    error.message.trim()
+  ) {
+    if (error.message.includes('DEMUXER_ERROR_COULD_NOT_OPEN')) {
+      return unsupportedAudioMessage;
+    }
+
+    return error.message.trim();
+  }
+
+  return 'Unable to load waveform.';
+};
+
+const assertAudioDownload = async (blob: Blob, fileName: string): Promise<void> => {
+  const blobType = blob.type.trim();
+
+  if (blob.size === 0) {
+    throw new Error(`Downloaded ${fileName} was empty.`);
+  }
+
+  const header = new Uint8Array(await blob.slice(0, 64).arrayBuffer());
+  const headerText = await readBlobHeaderText(blob);
+
+  if (/^(?:\{|\[|<!doctype html|<html|<\?xml|<Error)/i.test(headerText)) {
+    throw new Error(getTextDownloadErrorMessage(fileName, headerText));
+  }
+
+  if (isRiffWave(header)) {
+    const declaredSize = readUInt32LE(header, 4) + 8;
+
+    if (hasUtf8ReplacementBytes(header) || declaredSize > blob.size) {
+      throw new Error(
+        `Downloaded ${fileName} looks like a corrupted WAV file. Re-export and re-upload the mix as a fresh WAV or MP3.`,
+      );
+    }
+  }
+
+  if (isKnownAudioContainer(header)) {
+    return;
+  }
+
+  if (blobType.startsWith('audio/')) {
+    return;
+  }
+
+  if (!blobType || blobType === 'application/octet-stream') {
+    if (audioFileExtensionPattern.test(fileName)) {
+      return;
+    }
+  }
+
+  if (nonAudioBlobTypePattern.test(blobType)) {
+    throw new Error(`Downloaded ${fileName} as ${blobType} instead of audio.`);
+  }
+};
+
 export interface WaveformPlayerHandle {
   seekTo: (timeSeconds: number) => void;
   getCurrentTime: () => number;
@@ -95,6 +253,8 @@ export const WaveformPlayer = forwardRef<WaveformPlayerHandle, WaveformPlayerPro
             return;
           }
 
+          await assertAudioDownload(download.blob, download.fileName);
+
           const objectUrl = window.URL.createObjectURL(download.blob);
           objectUrlRef.current = objectUrl;
 
@@ -161,14 +321,14 @@ export const WaveformPlayer = forwardRef<WaveformPlayerHandle, WaveformPlayerPro
             }
 
             setStatus('error');
-            setErrorMessage(error instanceof Error ? error.message : 'Unable to load waveform.');
+            setErrorMessage(getWaveformErrorMessage(error, download.fileName));
           });
 
           await wavesurfer.load(objectUrl);
         } catch (error) {
           if (isActive) {
             setStatus('error');
-            setErrorMessage(error instanceof Error ? error.message : 'Unable to load waveform.');
+            setErrorMessage(getWaveformErrorMessage(error, mixFile.name));
           }
         }
       };

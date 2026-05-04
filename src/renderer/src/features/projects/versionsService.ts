@@ -7,6 +7,39 @@ import type {
 import { mockVersionsByProjectId, shouldUseMockProjectData, wait } from './mockProjectData';
 import { toProjectBlobServiceError, toProjectServiceError } from './project-service-error';
 
+const mockUploadedFileBlobs = new Map<string, Blob>();
+const downloadSizeToleranceBytes = 1024;
+
+const formatBytes = (sizeBytes: number): string => {
+  if (sizeBytes < 1024) {
+    return `${sizeBytes} B`;
+  }
+
+  if (sizeBytes < 1024 * 1024) {
+    return `${(sizeBytes / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const assertCompleteDownload = (blob: Blob, fileAsset: VersionFileAsset, fileName: string): void => {
+  if (fileAsset.sizeBytes <= 0 || blob.size <= 0) {
+    return;
+  }
+
+  const sizeDifference = Math.abs(blob.size - fileAsset.sizeBytes);
+
+  if (sizeDifference <= downloadSizeToleranceBytes) {
+    return;
+  }
+
+  throw new Error(
+    `Downloaded ${fileName} is incomplete or corrupted. Expected ${formatBytes(
+      fileAsset.sizeBytes,
+    )}, received ${formatBytes(blob.size)}.`,
+  );
+};
+
 const getMockVersionById = (versionId: string): SongVersion | null => {
   for (const versions of Object.values(mockVersionsByProjectId)) {
     const version = versions.find((candidate) => candidate.id === versionId);
@@ -110,6 +143,8 @@ export const versionsService = {
         createdAt: new Date().toISOString(),
       };
 
+      mockUploadedFileBlobs.set(fileAsset.id, params.file);
+
       for (const versions of Object.values(mockVersionsByProjectId)) {
         const version = versions.find((candidate) => candidate.id === params.versionId);
 
@@ -140,20 +175,28 @@ export const versionsService = {
   }): Promise<{ blob: Blob; fileName: string }> {
     if (shouldUseMockProjectData) {
       await wait(120);
+      const uploadedBlob = mockUploadedFileBlobs.get(params.fileAsset.id);
+
+      if (!uploadedBlob) {
+        throw new Error(`Mock download unavailable for ${params.fileAsset.name}.`);
+      }
+
       return {
-        blob: new Blob([`Mock download for ${params.fileAsset.originalName}`], {
-          type: params.fileAsset.mimeType || 'text/plain',
-        }),
+        blob: uploadedBlob,
         fileName: params.fileAsset.originalName || params.fileAsset.name,
       };
     }
 
     try {
       const result = await versionsApi.downloadFile(params.versionId, params.fileAsset.id);
+      const fallbackFileName = params.fileAsset.originalName || params.fileAsset.name;
+      const fileName =
+        result.fileName && result.fileName !== 'download' ? result.fileName : fallbackFileName;
 
+      assertCompleteDownload(result.blob, params.fileAsset, fileName);
       return {
         blob: result.blob,
-        fileName: result.fileName || params.fileAsset.originalName || params.fileAsset.name,
+        fileName,
       };
     } catch (error: unknown) {
       throw toProjectServiceError(error, `Unable to download ${params.fileAsset.name}.`);
