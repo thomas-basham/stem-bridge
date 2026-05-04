@@ -84,6 +84,7 @@ const linuxOptions = {
   bin: 'StemBridge',
   productName: 'StemBridge',
   genericName: 'Music Collaboration',
+  license: 'UNLICENSED',
   categories: ['AudioVideo', 'Audio'],
   maintainer: 'StemBridge',
 };
