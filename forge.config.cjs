@@ -71,6 +71,7 @@ if (shouldSignMac) {
 
 const squirrelConfig = {
   name: 'StemBridge',
+  authors: 'StemBridge',
   setupExe: 'StemBridgeSetup.exe',
 };
 
@@ -80,6 +81,7 @@ if (fs.existsSync(windowsIconPath)) {
 
 const linuxOptions = {
   name: 'stembridge',
+  bin: 'StemBridge',
   productName: 'StemBridge',
   genericName: 'Music Collaboration',
   categories: ['AudioVideo', 'Audio'],
