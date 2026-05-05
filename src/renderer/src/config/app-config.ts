@@ -6,7 +6,8 @@ interface AppConfig {
 type EnvKey = keyof Pick<ImportMetaEnv, 'VITE_API_BASE_URL' | 'VITE_USE_MOCK_DATA'>;
 
 const defaultConfig = {
-  apiBaseUrl: 'http://localhost:4000',
+  developmentApiBaseUrl: 'http://localhost:4000',
+  productionApiBaseUrl: 'https://i74640i5ab.execute-api.us-west-2.amazonaws.com',
   useMockData: false,
 } as const;
 
@@ -34,6 +35,13 @@ const normalizeBaseUrl = (baseUrl: string): string => {
 };
 
 export const appConfig: AppConfig = Object.freeze({
-  apiBaseUrl: normalizeBaseUrl(readStringEnv('VITE_API_BASE_URL', defaultConfig.apiBaseUrl)),
+  apiBaseUrl: normalizeBaseUrl(
+    readStringEnv(
+      'VITE_API_BASE_URL',
+      import.meta.env.PROD
+        ? defaultConfig.productionApiBaseUrl
+        : defaultConfig.developmentApiBaseUrl,
+    ),
+  ),
   useMockData: readBooleanEnv('VITE_USE_MOCK_DATA', defaultConfig.useMockData),
 });
