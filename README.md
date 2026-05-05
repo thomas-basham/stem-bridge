@@ -33,6 +33,31 @@ The workflow uses the repository `GITHUB_TOKEN`, so GitHub Actions must have
 read/write `contents` permission and branch protection must allow the action to
 push the version bump commit and tag.
 
+macOS releases are signed and notarized in CI. Add these repository secrets:
+
+- `MAC_CERTIFICATE_P12_BASE64`: base64-encoded `.p12` export of the Developer ID
+  Application certificate and private key
+- `MAC_CERTIFICATE_PASSWORD`: password used when exporting the `.p12`
+- `MAC_CODESIGN_IDENTITY`: full signing identity, for example
+  `Developer ID Application: Example, Inc. (TEAMID)`
+
+Then add one notarization credential option.
+
+Apple ID app-specific password:
+
+- `APPLE_ID`
+- `APPLE_APP_SPECIFIC_PASSWORD`
+- `APPLE_TEAM_ID`
+
+App Store Connect API key:
+
+- `APPLE_API_KEY_P8_BASE64`: base64-encoded `.p8` API key
+- `APPLE_API_KEY_ID`
+- `APPLE_API_ISSUER`
+
+The `.cer` certificate download is not enough for CI signing by itself; export
+the certificate plus private key from Keychain Access as `.p12`.
+
 Signed and notarized release build:
 
 - Install a `Developer ID Application` certificate in Keychain.
