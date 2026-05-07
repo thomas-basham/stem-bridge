@@ -1,4 +1,19 @@
+import type {
+  DesktopCachedUploadFile,
+  DesktopQueuedFileUploadPayload,
+  DesktopQueuedVersionCreatePayload,
+} from '@shared/types';
 import { projectsApi, versionsApi } from '@/lib/api';
+import { getStoredUser } from '@/lib/auth-storage';
+import {
+  desktopSnapshotKeys,
+  enqueueDesktopQueueItem,
+  importDesktopUploadFile,
+  isLikelyNetworkError,
+  readDesktopCachedFile,
+  readDesktopSnapshot,
+  saveDesktopSnapshot,
+} from '@/lib/desktop';
 import type {
   SongVersion,
   VersionFileAsset,
@@ -9,6 +24,9 @@ import { toProjectBlobServiceError, toProjectServiceError } from './project-serv
 
 const mockUploadedFileBlobs = new Map<string, Blob>();
 const downloadSizeToleranceBytes = 1024;
+const localVersionIdPrefix = 'local-version-';
+const localFileIdPrefix = 'local-file-';
+const desktopCacheStorageKeyPrefix = 'desktop-cache:';
 
 const formatBytes = (sizeBytes: number): string => {
   if (sizeBytes < 1024) {
@@ -52,6 +70,141 @@ const getMockVersionById = (versionId: string): SongVersion | null => {
   return null;
 };
 
+const getCurrentUser = (): SongVersion['createdBy'] => {
+  return (
+    getStoredUser() ?? {
+      id: 'local-current-user',
+      email: 'offline@stembridge.local',
+      name: 'Offline User',
+    }
+  );
+};
+
+const isLocalVersionId = (versionId: string): boolean => {
+  return versionId.startsWith(localVersionIdPrefix);
+};
+
+const getCachedFileIdFromStorageKey = (storageKey: string): string | null => {
+  return storageKey.startsWith(desktopCacheStorageKeyPrefix)
+    ? storageKey.slice(desktopCacheStorageKeyPrefix.length)
+    : null;
+};
+
+const copyBytesToArrayBuffer = (data: Uint8Array): ArrayBuffer => {
+  const buffer = new ArrayBuffer(data.byteLength);
+  new Uint8Array(buffer).set(data);
+  return buffer;
+};
+
+const saveVersionSnapshots = async (projectId: string, versions: SongVersion[]): Promise<void> => {
+  await saveDesktopSnapshot(desktopSnapshotKeys.versions(projectId), versions);
+  await Promise.all(
+    versions.map((version) => saveDesktopSnapshot(desktopSnapshotKeys.version(version.id), version)),
+  );
+};
+
+const mergePendingLocalVersions = async (
+  projectId: string,
+  remoteVersions: SongVersion[],
+): Promise<SongVersion[]> => {
+  const cachedVersions = await readDesktopSnapshot<SongVersion[]>(
+    desktopSnapshotKeys.versions(projectId),
+  );
+  const localVersions =
+    cachedVersions?.data.filter((version) => isLocalVersionId(version.id)) ?? [];
+
+  return [...localVersions, ...remoteVersions];
+};
+
+const upsertCachedVersion = async (version: SongVersion): Promise<void> => {
+  const cachedVersions = await readDesktopSnapshot<SongVersion[]>(
+    desktopSnapshotKeys.versions(version.projectId),
+  );
+  const nextVersions = [version, ...(cachedVersions?.data ?? []).filter((item) => item.id !== version.id)];
+
+  await saveVersionSnapshots(version.projectId, nextVersions);
+};
+
+const appendCachedFileAsset = async (
+  projectId: string,
+  versionId: string,
+  fileAsset: VersionFileAsset,
+): Promise<void> => {
+  const cachedVersion = await readDesktopSnapshot<SongVersion>(desktopSnapshotKeys.version(versionId));
+
+  if (cachedVersion) {
+    const nextVersion: SongVersion = {
+      ...cachedVersion.data,
+      fileAssetCount: (cachedVersion.data.fileAssetCount ?? 0) + 1,
+      fileAssets: [...(cachedVersion.data.fileAssets ?? []), fileAsset],
+    };
+    await upsertCachedVersion(nextVersion);
+    return;
+  }
+
+  const cachedVersions = await readDesktopSnapshot<SongVersion[]>(
+    desktopSnapshotKeys.versions(projectId),
+  );
+
+  if (!cachedVersions) {
+    return;
+  }
+
+  const nextVersions = cachedVersions.data.map((version) => {
+    if (version.id !== versionId) {
+      return version;
+    }
+
+    return {
+      ...version,
+      fileAssetCount: (version.fileAssetCount ?? 0) + 1,
+      fileAssets: [...(version.fileAssets ?? []), fileAsset],
+    };
+  });
+
+  await saveVersionSnapshots(projectId, nextVersions);
+};
+
+const createLocalFileAsset = (
+  versionId: string,
+  cachedFile: DesktopCachedUploadFile,
+  type: VersionFileAssetType,
+): VersionFileAsset => {
+  return {
+    id: `${localFileIdPrefix}${window.crypto.randomUUID()}`,
+    versionId,
+    name: cachedFile.fileName,
+    originalName: cachedFile.fileName,
+    type,
+    mimeType: cachedFile.mimeType || 'application/octet-stream',
+    sizeBytes: cachedFile.sizeBytes,
+    storageKey: `${desktopCacheStorageKeyPrefix}${cachedFile.id}`,
+    url: '',
+    createdAt: new Date().toISOString(),
+  };
+};
+
+const queueLocalFileUpload = async (params: {
+  projectId: string;
+  versionId: string;
+  localVersionId?: string;
+  cachedFile: DesktopCachedUploadFile;
+  type: VersionFileAssetType;
+}): Promise<void> => {
+  const payload: DesktopQueuedFileUploadPayload = {
+    projectId: params.projectId,
+    versionId: params.localVersionId ? undefined : params.versionId,
+    localVersionId: params.localVersionId,
+    cachedFileId: params.cachedFile.id,
+    fileName: params.cachedFile.fileName,
+    mimeType: params.cachedFile.mimeType,
+    sizeBytes: params.cachedFile.sizeBytes,
+    fileType: params.type,
+  };
+
+  await enqueueDesktopQueueItem('file-upload', payload);
+};
+
 export const versionsService = {
   async list(projectId: string): Promise<SongVersion[]> {
     if (shouldUseMockProjectData) {
@@ -60,8 +213,21 @@ export const versionsService = {
     }
 
     try {
-      return await projectsApi.versions(projectId);
+      const remoteVersions = await projectsApi.versions(projectId);
+      const versions = await mergePendingLocalVersions(projectId, remoteVersions);
+      void saveVersionSnapshots(projectId, versions);
+      return versions;
     } catch (error: unknown) {
+      if (isLikelyNetworkError(error)) {
+        const cachedVersions = await readDesktopSnapshot<SongVersion[]>(
+          desktopSnapshotKeys.versions(projectId),
+        );
+
+        if (cachedVersions) {
+          return cachedVersions.data;
+        }
+      }
+
       throw toProjectServiceError(error, 'Unable to load versions.');
     }
   },
@@ -79,8 +245,20 @@ export const versionsService = {
     }
 
     try {
-      return await versionsApi.getById(versionId);
+      const version = await versionsApi.getById(versionId);
+      void saveDesktopSnapshot(desktopSnapshotKeys.version(versionId), version);
+      return version;
     } catch (error: unknown) {
+      if (isLikelyNetworkError(error) || isLocalVersionId(versionId)) {
+        const cachedVersion = await readDesktopSnapshot<SongVersion>(
+          desktopSnapshotKeys.version(versionId),
+        );
+
+        if (cachedVersion) {
+          return cachedVersion.data;
+        }
+      }
+
       throw toProjectServiceError(error, 'Unable to load version.');
     }
   },
@@ -112,8 +290,43 @@ export const versionsService = {
     }
 
     try {
-      return await projectsApi.createVersion(projectId, payload);
+      const version = await projectsApi.createVersion(projectId, payload);
+      await upsertCachedVersion(version);
+      return version;
     } catch (error: unknown) {
+      if (isLikelyNetworkError(error)) {
+        const cachedVersions = await readDesktopSnapshot<SongVersion[]>(
+          desktopSnapshotKeys.versions(projectId),
+        );
+        const nextVersionNumber =
+          Math.max(0, ...(cachedVersions?.data.map((version) => version.versionNumber) ?? [])) + 1;
+        const localVersion: SongVersion = {
+          id: `${localVersionIdPrefix}${window.crypto.randomUUID()}`,
+          projectId,
+          versionNumber: nextVersionNumber,
+          notes: payload.notes,
+          createdAt: new Date().toISOString(),
+          createdBy: getCurrentUser(),
+          fileAssetCount: 0,
+          commentCount: 0,
+          fileAssets: [],
+          comments: [],
+        };
+        const queuePayload: DesktopQueuedVersionCreatePayload = {
+          projectId,
+          localVersionId: localVersion.id,
+          notes: payload.notes,
+        };
+        const queuedItem = await enqueueDesktopQueueItem('version-create', queuePayload);
+
+        if (!queuedItem) {
+          throw toProjectServiceError(error, 'Unable to create version.');
+        }
+
+        await upsertCachedVersion(localVersion);
+        return localVersion;
+      }
+
       throw toProjectServiceError(error, 'Unable to create version.');
     }
   },
@@ -121,6 +334,7 @@ export const versionsService = {
   async uploadFile(params: {
     versionId: string;
     file: File;
+    cachedFile?: DesktopCachedUploadFile;
     type: VersionFileAssetType;
     onProgress?: (progress: number) => void;
   }): Promise<VersionFileAsset> {
@@ -158,13 +372,60 @@ export const versionsService = {
       return fileAsset;
     }
 
+    const projectId = await (async (): Promise<string | null> => {
+      const cachedVersion = await readDesktopSnapshot<SongVersion>(
+        desktopSnapshotKeys.version(params.versionId),
+      );
+      return cachedVersion?.data.projectId ?? null;
+    })();
+
+    if (isLocalVersionId(params.versionId)) {
+      const cachedFile = params.cachedFile ?? (await importDesktopUploadFile(params.file));
+
+      if (!projectId || !cachedFile) {
+        throw new Error(`Unable to queue ${params.file.name} for upload.`);
+      }
+
+      await queueLocalFileUpload({
+        projectId,
+        versionId: params.versionId,
+        localVersionId: params.versionId,
+        cachedFile,
+        type: params.type,
+      });
+
+      const localFileAsset = createLocalFileAsset(params.versionId, cachedFile, params.type);
+      await appendCachedFileAsset(projectId, params.versionId, localFileAsset);
+      params.onProgress?.(100);
+      return localFileAsset;
+    }
+
     try {
-      return await versionsApi.uploadFile(params.versionId, {
+      const fileAsset = await versionsApi.uploadFile(params.versionId, {
         file: params.file,
         type: params.type,
         onProgress: params.onProgress,
       });
+      return fileAsset;
     } catch (error: unknown) {
+      if (isLikelyNetworkError(error)) {
+        const cachedFile = params.cachedFile ?? (await importDesktopUploadFile(params.file));
+
+        if (projectId && cachedFile) {
+          await queueLocalFileUpload({
+            projectId,
+            versionId: params.versionId,
+            cachedFile,
+            type: params.type,
+          });
+
+          const localFileAsset = createLocalFileAsset(params.versionId, cachedFile, params.type);
+          await appendCachedFileAsset(projectId, params.versionId, localFileAsset);
+          params.onProgress?.(100);
+          return localFileAsset;
+        }
+      }
+
       throw toProjectServiceError(error, `Unable to upload ${params.file.name}.`);
     }
   },
@@ -184,6 +445,18 @@ export const versionsService = {
       return {
         blob: uploadedBlob,
         fileName: params.fileAsset.originalName || params.fileAsset.name,
+      };
+    }
+
+    const cachedFileId = getCachedFileIdFromStorageKey(params.fileAsset.storageKey);
+
+    if (cachedFileId) {
+      const cachedFile = await readDesktopCachedFile(cachedFileId);
+      return {
+        blob: new Blob([copyBytesToArrayBuffer(cachedFile.data)], {
+          type: cachedFile.mimeType || params.fileAsset.mimeType || 'application/octet-stream',
+        }),
+        fileName: cachedFile.fileName,
       };
     }
 

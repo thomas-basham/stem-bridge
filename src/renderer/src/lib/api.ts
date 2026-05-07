@@ -332,9 +332,6 @@ export const versionsApi = {
       method: 'POST',
       url: API_ENDPOINTS.versions.fileUpload(versionId),
       data: formData,
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
       onUploadProgress(progressEvent) {
         if (!payload.onProgress || !progressEvent.total) {
           return;

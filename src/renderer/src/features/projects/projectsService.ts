@@ -1,5 +1,11 @@
 import type { ProjectSummary } from '@shared/types';
 import { projectsApi } from '@/lib/api';
+import {
+  desktopSnapshotKeys,
+  isLikelyNetworkError,
+  readDesktopSnapshot,
+  saveDesktopSnapshot,
+} from '@/lib/desktop';
 import { isNotFoundApiError, toProjectServiceError } from './project-service-error';
 import { mockProjects, shouldUseMockProjectData, wait } from './mockProjectData';
 
@@ -11,8 +17,20 @@ export const projectsService = {
     }
 
     try {
-      return await projectsApi.list();
+      const projects = await projectsApi.list();
+      void saveDesktopSnapshot(desktopSnapshotKeys.projectsList, projects);
+      return projects;
     } catch (error: unknown) {
+      if (isLikelyNetworkError(error)) {
+        const cachedSnapshot = await readDesktopSnapshot<ProjectSummary[]>(
+          desktopSnapshotKeys.projectsList,
+        );
+
+        if (cachedSnapshot) {
+          return cachedSnapshot.data;
+        }
+      }
+
       throw toProjectServiceError(error, 'Unable to load projects.');
     }
   },
@@ -37,7 +55,17 @@ export const projectsService = {
     }
 
     try {
-      return await projectsApi.create(payload);
+      const project = await projectsApi.create(payload);
+      const cachedProjects = await readDesktopSnapshot<ProjectSummary[]>(
+        desktopSnapshotKeys.projectsList,
+      );
+      void saveDesktopSnapshot(desktopSnapshotKeys.project(project.id), project);
+
+      if (cachedProjects) {
+        void saveDesktopSnapshot(desktopSnapshotKeys.projectsList, [project, ...cachedProjects.data]);
+      }
+
+      return project;
     } catch (error: unknown) {
       throw toProjectServiceError(error, 'Unable to create project.');
     }
@@ -49,10 +77,27 @@ export const projectsService = {
     }
 
     try {
-      return await projectsApi.getById(projectId);
+      const project = await projectsApi.getById(projectId);
+      void saveDesktopSnapshot(desktopSnapshotKeys.project(projectId), project);
+      return project;
     } catch (error: unknown) {
       if (isNotFoundApiError(error)) {
         return null;
+      }
+
+      if (isLikelyNetworkError(error)) {
+        const cachedProject = await readDesktopSnapshot<ProjectSummary>(
+          desktopSnapshotKeys.project(projectId),
+        );
+
+        if (cachedProject) {
+          return cachedProject.data;
+        }
+
+        const cachedProjects = await readDesktopSnapshot<ProjectSummary[]>(
+          desktopSnapshotKeys.projectsList,
+        );
+        return cachedProjects?.data.find((project) => project.id === projectId) ?? null;
       }
 
       throw toProjectServiceError(error, 'Unable to load project.');

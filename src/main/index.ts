@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { join } from 'node:path';
 import { desktopChannels, type DesktopMetadata } from '@shared/types';
+import { DesktopStore } from './desktop-store';
 
 const isSafeExternalUrl = (url: string): boolean => {
   try {
@@ -70,7 +71,7 @@ const createMainWindow = (): BrowserWindow => {
   return mainWindow;
 };
 
-const registerIpcHandlers = (): void => {
+const registerIpcHandlers = (desktopStore: DesktopStore): void => {
   ipcMain.handle(desktopChannels.getMetadata, (): DesktopMetadata => {
     return {
       appName: app.getName(),
@@ -81,10 +82,64 @@ const registerIpcHandlers = (): void => {
       platform: process.platform,
     };
   });
+
+  ipcMain.handle(desktopChannels.getNetworkStatus, () => desktopStore.getNetworkStatus());
+
+  ipcMain.handle(desktopChannels.getProjectSnapshot, (_event, key: string) => {
+    return desktopStore.getProjectSnapshot(key);
+  });
+
+  ipcMain.handle(desktopChannels.saveProjectSnapshot, (_event, snapshot) => {
+    return desktopStore.saveProjectSnapshot(snapshot);
+  });
+
+  ipcMain.handle(desktopChannels.importUploadFile, (_event, payload: { path: string; name?: string }) => {
+    return desktopStore.importUploadFile(payload.path, payload.name);
+  });
+
+  ipcMain.handle(desktopChannels.readCachedFile, (_event, cachedFileId: string) => {
+    return desktopStore.readCachedFile(cachedFileId);
+  });
+
+  ipcMain.handle(desktopChannels.listQueue, () => desktopStore.listQueue());
+
+  ipcMain.handle(desktopChannels.enqueueQueueItem, (_event, item) => {
+    return desktopStore.enqueueQueueItem(item);
+  });
+
+  ipcMain.handle(desktopChannels.updateQueueItem, (_event, itemId: string, patch) => {
+    return desktopStore.updateQueueItem(itemId, patch);
+  });
+
+  ipcMain.handle(desktopChannels.retryQueue, () => desktopStore.retryQueue());
+
+  ipcMain.handle(desktopChannels.chooseWatchFolder, () => desktopStore.chooseWatchFolder());
+
+  ipcMain.handle(desktopChannels.listWatchFolders, () => desktopStore.listWatchFolders());
+
+  ipcMain.handle(desktopChannels.removeWatchFolder, (_event, folderId: string) => {
+    return desktopStore.removeWatchFolder(folderId);
+  });
+
+  ipcMain.handle(desktopChannels.listDawCandidates, () => desktopStore.listDawCandidates());
+
+  ipcMain.handle(desktopChannels.importDawCandidate, (_event, candidateId: string) => {
+    return desktopStore.importDawCandidate(candidateId);
+  });
+
+  ipcMain.handle(desktopChannels.cacheDawCandidate, (_event, candidateId: string) => {
+    return desktopStore.cacheDawCandidate(candidateId);
+  });
+
+  ipcMain.handle(desktopChannels.markDawCandidatesImported, (_event, candidateIds: string[]) => {
+    return desktopStore.markDawCandidatesImported(candidateIds);
+  });
 };
 
 app.whenReady().then(() => {
-  registerIpcHandlers();
+  const desktopStore = new DesktopStore(join(app.getPath('userData'), 'StemBridge'));
+  registerIpcHandlers(desktopStore);
+  void desktopStore.initialize();
   createMainWindow();
 
   app.on('activate', () => {

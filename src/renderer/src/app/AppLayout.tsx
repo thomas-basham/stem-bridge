@@ -1,7 +1,9 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { Badge, Button, useToast } from '@/components/ui';
+import { DesktopStatusBar } from '@/components/desktop/DesktopStatusBar';
 import { APP_ROUTES } from '@/constants/app-constants';
 import { useAuth } from '@/features/auth/auth-context';
+import { useDesktopRuntime } from '@/hooks/useDesktopRuntime';
 import { useDesktopMetadata } from '@/hooks/useDesktopMetadata';
 
 const upcomingWorkspaceItems = ['Versions', 'Files', 'Comments'];
@@ -20,6 +22,7 @@ export function AppLayout() {
   const toast = useToast();
   const { user, logout } = useAuth();
   const metadataState = useDesktopMetadata();
+  const desktopRuntime = useDesktopRuntime();
   const displayName = getUserDisplayName(user);
   const avatarInitial = displayName.slice(0, 1).toUpperCase();
 
@@ -92,6 +95,8 @@ export function AppLayout() {
             <Badge>Context Isolation Enabled</Badge>
           </div>
         </header>
+
+        <DesktopStatusBar runtime={desktopRuntime} />
 
         <Outlet />
       </div>
