@@ -1874,6 +1874,33 @@ a {
   gap: 16px;
 }
 
+.upload-destination {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.024);
+}
+
+.upload-destination legend {
+  padding: 0 6px;
+  color: var(--text-soft);
+  font-size: 0.92rem;
+}
+
+.upload-destination label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-soft);
+}
+
+.upload-destination input {
+  accent-color: var(--teal);
+}
+
 .file-dropzone {
   position: relative;
   display: grid;
@@ -2178,6 +2205,129 @@ a {
   padding: 28px;
 }
 
+.desktop-status-bar,
+.daw-watch-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.035);
+  box-shadow: var(--shadow-soft);
+}
+
+.desktop-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding: 12px 14px;
+}
+
+.desktop-status-bar--offline {
+  border-color: rgba(245, 158, 11, 0.34);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.desktop-status-bar__main,
+.desktop-status-bar__queue {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-soft);
+  font-size: 0.9rem;
+}
+
+.desktop-status-bar__queue {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.daw-watch-panel {
+  margin-top: 18px;
+  padding: 18px;
+}
+
+.daw-watch-panel__header,
+.daw-watch-panel__folders li,
+.daw-watch-panel__candidates li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.daw-watch-panel__header {
+  margin-bottom: 14px;
+}
+
+.daw-watch-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.daw-watch-panel__header h4,
+.daw-watch-panel__header p {
+  margin: 0;
+}
+
+.daw-watch-panel__header p,
+.daw-watch-panel__folders span,
+.daw-watch-panel__candidate-main span {
+  color: var(--text-soft);
+  font-size: 0.9rem;
+}
+
+.daw-watch-panel__folders,
+.daw-watch-panel__candidates {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.daw-watch-panel__folders li,
+.daw-watch-panel__candidates li {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.daw-watch-panel__folders div,
+.daw-watch-panel__candidate-main {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.daw-watch-panel__folders strong,
+.daw-watch-panel__folders span,
+.daw-watch-panel__candidate-main strong,
+.daw-watch-panel__candidate-main span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.daw-watch-panel__error {
+  margin: 10px 0 0;
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+
+.daw-watch-panel__loading {
+  padding: 14px 0;
+}
+
+.daw-watch-panel__summary {
+  margin: 10px 0 0;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;
@@ -2236,6 +2386,7 @@ a {
   }
 
   .desktop-topbar,
+  .desktop-status-bar,
   .page-container__header,
   .project-detail-panel__header,
   .project-card__header,
@@ -2243,6 +2394,9 @@ a {
   .empty-state,
   .file-asset-row,
   .version-files-panel__header,
+  .daw-watch-panel__header,
+  .daw-watch-panel__folders li,
+  .daw-watch-panel__candidates li,
   .project-list__link,
   .project-list__summary,
   .waveform-player__controls,
